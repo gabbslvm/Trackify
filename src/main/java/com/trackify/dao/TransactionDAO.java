@@ -42,8 +42,8 @@ public class TransactionDAO {
 
     public List<Transaction> getTransactionsByUser(int userId) {
         List<Transaction> list = new ArrayList<>();
-        String sql = "SELECT id, user_id, type, category, amount, date, description "
-                + "FROM transactions WHERE user_id = ? ORDER BY date DESC, id DESC";
+        String sql = "SELECT id, user_id, type, category, amount, transaction_date, description "
+        + "FROM transactions WHERE user_id = ? ORDER BY transaction_date DESC, id DESC";
 
         try (Connection con = DBConnection.getConnection();
             PreparedStatement ps = con.prepareStatement(sql)) {
@@ -56,7 +56,7 @@ public class TransactionDAO {
                         rs.getString("type"),
                         rs.getString("category"),
                         rs.getDouble("amount"),
-                        rs.getDate("date").toLocalDate(),
+                        rs.getDate("transaction_date").toLocalDate(),
                         rs.getString("description")));
                 }
             }
@@ -67,8 +67,8 @@ public class TransactionDAO {
     }
 
     public boolean updateTransaction(Transaction t) {
-        String sql = "UPDATE transactions SET type = ?, category = ?, amount = ?, date = ?, description = ? "
-                + "WHERE id = ? AND user_id = ?";
+        String sql = "UPDATE transactions SET type = ?, category = ?, amount = ?, transaction_date = ?, description = ? "
+        + "WHERE id = ? AND user_id = ?";
 
         try (Connection con = DBConnection.getConnection();
         PreparedStatement ps = con.prepareStatement(sql)) {
