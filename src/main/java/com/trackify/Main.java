@@ -2,6 +2,7 @@ package com.trackify;
 
 import com.trackify.dao.DBConnection;
 import com.trackify.gui.LoginFrame;
+import com.trackify.manager.TransactionManager;
 
 import java.sql.Connection;
 import javax.swing.JOptionPane;
@@ -19,6 +20,6 @@ public class Main {
             return;
         }
 
-        SwingUtilities.invokeLater(() -> new LoginFrame().setVisible(true));
+        SwingUtilities.invokeLater(() -> new LoginFrame(new TransactionManager()).setVisible(true));
     }
 }
