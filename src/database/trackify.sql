@@ -1,0 +1,19 @@
+CREATE DATABASE IF NOT EXISTS trackify;
+USE trackify;
+
+CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(64) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS transactions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    type ENUM('INCOME', 'EXPENSE') NOT NULL,
+    category VARCHAR(100) NOT NULL,
+    amount DECIMAL(12, 2) NOT NULL,
+    transaction_date DATE NOT NULL,
+    description VARCHAR(255) NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);

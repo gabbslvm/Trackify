@@ -16,7 +16,7 @@ public class TransactionDAO {
                 + "VALUES(?, ?, ?, ?, ? , ?)";
 
         try (Connection con = DBConnection.getConnection();
-        PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, t.getUserId());
             ps.setString(2, t.getType());
             ps.setString(3, t.getCategory());
@@ -43,21 +43,21 @@ public class TransactionDAO {
     public List<Transaction> getTransactionsByUser(int userId) {
         List<Transaction> list = new ArrayList<>();
         String sql = "SELECT id, user_id, type, category, amount, transaction_date, description "
-        + "FROM transactions WHERE user_id = ? ORDER BY transaction_date DESC, id DESC";
+                + "FROM transactions WHERE user_id = ? ORDER BY transaction_date DESC, id DESC";
 
         try (Connection con = DBConnection.getConnection();
-            PreparedStatement ps = con.prepareStatement(sql)) {
+                PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, userId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     list.add(new Transaction(
-                        rs.getInt("id"),
-                        rs.getInt("user_id"),
-                        rs.getString("type"),
-                        rs.getString("category"),
-                        rs.getDouble("amount"),
-                        rs.getDate("transaction_date").toLocalDate(),
-                        rs.getString("description")));
+                            rs.getInt("id"),
+                            rs.getInt("user_id"),
+                            rs.getString("type"),
+                            rs.getString("category"),
+                            rs.getDouble("amount"),
+                            rs.getDate("transaction_date").toLocalDate(),
+                            rs.getString("description")));
                 }
             }
         } catch (SQLException e) {
@@ -68,10 +68,10 @@ public class TransactionDAO {
 
     public boolean updateTransaction(Transaction t) {
         String sql = "UPDATE transactions SET type = ?, category = ?, amount = ?, transaction_date = ?, description = ? "
-        + "WHERE id = ? AND user_id = ?";
+                + "WHERE id = ? AND user_id = ?";
 
         try (Connection con = DBConnection.getConnection();
-        PreparedStatement ps = con.prepareStatement(sql)) {
+                PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, t.getType());
             ps.setString(2, t.getCategory());
             ps.setDouble(3, t.getAmount());
@@ -88,10 +88,10 @@ public class TransactionDAO {
     }
 
     public boolean deleteTransaction(int id, int userId) {
-    String sql = "DELETE FROM transactions WHERE id = ? AND user_id = ?";
+        String sql = "DELETE FROM transactions WHERE id = ? AND user_id = ?";
 
-    try (Connection con = DBConnection.getConnection();
-        PreparedStatement ps = con.prepareStatement(sql)) {
+        try (Connection con = DBConnection.getConnection();
+                PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, id);
             ps.setInt(2, userId);
 
@@ -99,6 +99,25 @@ public class TransactionDAO {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-    return false;
-}
+        return false;
+    }
+
+    public boolean restoreTransaction(Transaction t) {
+        String sql = "INSERT INTO transactions (id, user_id, type, category, amount, transaction_date, description) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        try (Connection con = DBConnection.getConnection();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, t.getId());
+            ps.setInt(2, t.getUserId());
+            ps.setString(3, t.getType());
+            ps.setString(4, t.getCategory());
+            ps.setDouble(5, t.getAmount());
+            ps.setDate(6, Date.valueOf(t.getDate()));
+            ps.setString(7, t.getDescription());
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 }

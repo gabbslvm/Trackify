@@ -28,7 +28,7 @@ import javax.swing.table.DefaultTableModel;
 import com.trackify.manager.TransactionManager;
 import com.trackify.model.Transaction;
 
-public class TransactionsFrame extends JFrame {
+public class TransactionsPanel extends JFrame {
     private static final Color BLUE = new Color(30, 90, 130);
     private static final Color GREEN = new Color(20, 140, 90);
     private static final Color RED = new Color(205, 65, 65);
@@ -49,7 +49,7 @@ public class TransactionsFrame extends JFrame {
     private final JLabel topValue = new JLabel("N/A");
     private int selectedId = -1;
 
-    public TransactionsFrame(TransactionManager manager) {
+    public TransactionsPanel(TransactionManager manager) {
         this.manager = manager;
 
         setTitle("Trackify - Transactions");

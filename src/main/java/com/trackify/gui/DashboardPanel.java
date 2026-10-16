@@ -11,7 +11,7 @@ import javax.swing.border.LineBorder;
 
 import com.trackify.manager.TransactionManager;
 
-public class DashboardFrame extends JFrame {
+public class DashboardPanel extends JFrame {
 
     private static final Color BLUE = new Color(30, 90, 130);
     private static final Color GREEN = new Color(20, 140, 90);
@@ -25,7 +25,7 @@ public class DashboardFrame extends JFrame {
     private final JLabel balanceValue = new JLabel("PHP 0.00");
     private final JPanel balanceCard = new JPanel(new BorderLayout());
 
-    public DashboardFrame(TransactionManager manager) {
+    public DashboardPanel(TransactionManager manager) {
         this.manager = manager;
 
         setTitle("Trackify - Dashboard");
@@ -147,11 +147,11 @@ public class DashboardFrame extends JFrame {
     }
 
     private void openTransactions() {
-        new TransactionsFrame(manager).setVisible(true);
+        new TransactionsPanel(manager).setVisible(true);
     }
 
     private void logout() {
-        new LoginFrame(manager).setVisible(true);
+        new LoginPanel(manager).setVisible(true);
         dispose();
     }
 }
