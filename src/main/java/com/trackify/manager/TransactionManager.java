@@ -2,14 +2,17 @@ package com.trackify.manager;
 
 import com.trackify.dao.TransactionDAO;
 import com.trackify.model.Transaction;
-import java.time.YearMonth;
 import com.trackify.util.SortUtil;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 
 public class TransactionManager {
+    public static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("MM/dd/yyyy");
+
     private final TransactionDAO dao = new TransactionDAO();
     private List<Transaction> transactions = new ArrayList<>();
     private final Stack<Action> undoStack = new Stack<>();
@@ -49,7 +52,7 @@ public class TransactionManager {
         try {
             d = LocalDate.parse(date);
         } catch (DateTimeParseException e) {
-            throw new IllegalArgumentException("Date must be in yyyy-MM-dd format.");
+            throw new IllegalArgumentException("Please enter a valid date.");
         }
         return new Transaction(id, userId, type, category, amount, d, name);
     }
@@ -94,6 +97,40 @@ public class TransactionManager {
         }
         reload();
         return true;
+    }
+
+    // ===== Undo preview (used by the GUI before asking the user to confirm) =====
+
+    private String describe(Transaction t) {
+        return t.getDescription() + " | " + t.getType() + " | PHP " + String.format("%,.2f", t.getAmount())
+                + " | " + t.getCategory() + " | " + t.getDate().format(DATE_FORMAT);
+    }
+
+    // Text shown in the confirm popup, or null if there is nothing to undo
+    public String describeLastAction() {
+        if (undoStack.isEmpty())
+            return null;
+        Action a = undoStack.peek();
+        Transaction saved = a.data();
+
+        if (a.kind().equals("ADD"))
+            return "Undo the last ADD?\n\n" + describe(saved) + "\n\nThis transaction will be removed.";
+
+        if (a.kind().equals("EDIT")) {
+            Transaction current = find(saved.getId());
+            return "Undo the last EDIT?\n\nCurrent:\n" + (current == null ? "(not found)" : describe(current))
+                    + "\n\nIt will go back to:\n" + describe(saved);
+        }
+
+        return "Undo the last DELETE?\n\n" + describe(saved) + "\n\nThis transaction will be restored.";
+    }
+
+    // ID of the row to highlight in the table, or -1 if it is not in the table (DELETE)
+    public int getLastActionTransactionId() {
+        if (undoStack.isEmpty())
+            return -1;
+        Action a = undoStack.peek();
+        return a.kind().equals("DELETE") ? -1 : a.data().getId();
     }
 
     public List<Transaction> searchTransactions(String keyword) {
@@ -154,12 +191,12 @@ public class TransactionManager {
         return monthly;
     }
 
-    // public List<Transaction> getSortedTransactions(String field, boolean ascending) {
-    //     Comparator<Transaction> cmp = field.equals("Amount")
-    //             ? Comparator.comparingDouble(Transaction::getAmount)
-    //             : Comparator.comparing(Transaction::getDate);
-    //     if (!ascending)
-    //         cmp = cmp.reversed();
-    //     // return SortUtil.mergeSort(transactions, cmp);
-    // }
+    public List<Transaction> getSortedTransactions(String field, boolean ascending) {
+        List<Transaction> sorted = new ArrayList<>(transactions);
+        Comparator<Transaction> cmp = field.equals("Amount")
+                ? SortUtil.byAmount(ascending)
+                : SortUtil.byDate(ascending);
+        SortUtil.mergeSort(sorted, cmp);
+        return sorted;
+    }
 }

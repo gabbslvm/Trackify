@@ -9,12 +9,16 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
+import java.awt.Window;
+import java.time.LocalDate;
 import java.util.List;
 
 import javax.swing.BorderFactory;
+import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
+import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -22,13 +26,23 @@ import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 
+import com.github.lgooddatepicker.components.DatePicker;
+import com.github.lgooddatepicker.components.DatePickerSettings;
 import com.trackify.manager.TransactionManager;
 import com.trackify.model.Transaction;
 
 public class TransactionsPanel extends JPanel {
+    private static final String OTHERS = "Others";
+    private static final Color UNDO_HIGHLIGHT = new Color(255, 232, 140);
+    private static final String[] INCOME_CATEGORIES = { "Salary", "Allowance", "Incentive", "Bonus",
+            "Freelance", "Gift", OTHERS };
+    private static final String[] EXPENSE_CATEGORIES = { "Food", "Beverage", "Transportation", "Entertainment",
+            "Electricity", "Water", "Internet", "Rent", "Bills", "Shopping", "Health", "Education", OTHERS };
+
     private final MainFrame frame;
     private final TransactionManager manager;
     private final DefaultTableModel tableModel;
@@ -36,14 +50,17 @@ public class TransactionsPanel extends JPanel {
     private final JTextField nameField = new JTextField();
     private final JComboBox<String> typeCombo = new JComboBox<>(new String[] { "INCOME", "EXPENSE" });
     private final JTextField amountField = new JTextField();
-    private final JTextField dateField = new JTextField();
-    private final JTextField categoryField = new JTextField();
+    private final DatePicker datePicker;
+    private final JComboBox<String> categoryCombo = new JComboBox<>();
+    private final JTextField otherCategoryField = new JTextField();
+    private final JPanel categoryPanel = new JPanel(new BorderLayout(8, 0));
     private final JTextField searchField = new JTextField();
     private final JLabel incomeValue = new JLabel("PHP 0.00");
     private final JLabel expenseValue = new JLabel("PHP 0.00");
     private final JLabel balanceValue = new JLabel("PHP 0.00");
     private final JLabel topValue = new JLabel("N/A");
     private int selectedId = -1;
+    private boolean ignoreSelection = false;
 
     public TransactionsPanel(MainFrame frame, TransactionManager manager) {
         this.frame = frame;
@@ -53,6 +70,7 @@ public class TransactionsPanel extends JPanel {
         setBorder(BorderFactory.createEmptyBorder(0, 20, 18, 20));
         setLayout(new BorderLayout(12, 12));
 
+        // ===== Header =====
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(TrackifyTheme.PRIMARY_DARK);
         header.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
@@ -67,6 +85,25 @@ public class TransactionsPanel extends JPanel {
         backButton.addActionListener(e -> backToDashboard());
         header.add(backButton, BorderLayout.EAST);
 
+        // ===== Date picker (calendar, mm/dd/yyyy) =====
+        DatePickerSettings dateSettings = new DatePickerSettings();
+        dateSettings.setFormatForDatesCommonEra("MM/dd/yyyy");
+        datePicker = new DatePicker(dateSettings);
+        datePicker.setDate(LocalDate.now());
+
+        // ===== Category (dropdown + "Others" text box) =====
+        TrackifyTheme.styleInput(categoryCombo);
+        TrackifyTheme.styleInput(otherCategoryField);
+        otherCategoryField.setPreferredSize(new Dimension(150, 30));
+        categoryPanel.setOpaque(false);
+        categoryPanel.setPreferredSize(new Dimension(0, 30));
+        categoryPanel.add(categoryCombo, BorderLayout.CENTER);
+        categoryPanel.add(otherCategoryField, BorderLayout.EAST);
+        categoryCombo.addActionListener(e -> updateOtherVisibility());
+        typeCombo.addActionListener(e -> loadCategories());
+        loadCategories();
+
+        // ===== Form =====
         JPanel content = new JPanel(new BorderLayout(12, 12));
         content.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
 
@@ -81,8 +118,8 @@ public class TransactionsPanel extends JPanel {
         addFormField(formPanel, gbc, 0, 0, "Name", nameField);
         addFormField(formPanel, gbc, 0, 1, "Type", typeCombo);
         addFormField(formPanel, gbc, 0, 2, "Amount", amountField);
-        addFormField(formPanel, gbc, 0, 3, "Date (yyyy-MM-dd)", dateField);
-        addFormField(formPanel, gbc, 0, 4, "Category", categoryField);
+        addFormRow(formPanel, gbc, 0, 3, "Date (mm/dd/yyyy)", datePicker);
+        addFormRow(formPanel, gbc, 0, 4, "Category", categoryPanel);
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         JButton addButton = makeButton("Add", TrackifyTheme.PRIMARY);
@@ -95,7 +132,7 @@ public class TransactionsPanel extends JPanel {
         editButton.addActionListener(e -> updateTransaction());
         deleteButton.addActionListener(e -> deleteTransaction());
         undoButton.addActionListener(e -> undoTransaction());
-        clearButton.addActionListener(e -> clearForm());
+        clearButton.addActionListener(e -> confirmClear());
 
         buttonPanel.add(addButton);
         buttonPanel.add(editButton);
@@ -109,6 +146,7 @@ public class TransactionsPanel extends JPanel {
         gbc.anchor = GridBagConstraints.EAST;
         formPanel.add(buttonPanel, gbc);
 
+        // ===== Summary =====
         JPanel rightPanel = new JPanel(new BorderLayout(8, 8));
         rightPanel.setOpaque(false);
         JPanel summaryPanel = TrackifyTheme.sectionPanel("Summary", new GridBagLayout());
@@ -127,6 +165,7 @@ public class TransactionsPanel extends JPanel {
         filler.weighty = 1.0;
         summaryPanel.add(new JPanel(), filler);
 
+        // ===== Search =====
         JPanel searchPanel = TrackifyTheme.sectionPanel("Search", new BorderLayout(8, 8));
         searchPanel.add(new JLabel("Keyword: "), BorderLayout.WEST);
         TrackifyTheme.styleInput(searchField);
@@ -146,6 +185,7 @@ public class TransactionsPanel extends JPanel {
         searchActions.add(resetButton);
         searchPanel.add(searchActions, BorderLayout.SOUTH);
 
+        // ===== Sort =====
         JPanel sortPanel = TrackifyTheme.sectionPanel("Sort", new FlowLayout(FlowLayout.LEFT, 8, 0));
         JComboBox<String> sortField = new JComboBox<>(new String[] { "Date", "Amount" });
         JComboBox<String> sortOrder = new JComboBox<>(new String[] { "Ascending", "Descending" });
@@ -155,7 +195,7 @@ public class TransactionsPanel extends JPanel {
         sortButton.addActionListener(e -> {
             String field = (String) sortField.getSelectedItem();
             boolean ascending = "Ascending".equals(sortOrder.getSelectedItem());
-            //fillTable(manager.getSortedTransactions(field, ascending));
+            fillTable(manager.getSortedTransactions(field, ascending));
         });
         sortPanel.add(sortField);
         sortPanel.add(sortOrder);
@@ -172,6 +212,7 @@ public class TransactionsPanel extends JPanel {
         content.add(formPanel, BorderLayout.WEST);
         content.add(rightPanel, BorderLayout.CENTER);
 
+        // ===== Table =====
         tableModel = new DefaultTableModel(new Object[] { "ID", "Name", "Type", "Amount", "Category", "Date" }, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -196,6 +237,8 @@ public class TransactionsPanel extends JPanel {
         table.getColumnModel().getColumn(3).setCellRenderer(rightAlign);
 
         table.getSelectionModel().addListSelectionListener(e -> {
+            if (ignoreSelection)
+                return;
             if (!e.getValueIsAdjusting() && table.getSelectedRow() >= 0) {
                 selectedId = (int) tableModel.getValueAt(table.getSelectedRow(), 0);
                 fillFormFromSelected(selectedId);
@@ -215,14 +258,23 @@ public class TransactionsPanel extends JPanel {
         refreshTable();
     }
 
+    // ===== Form helpers =====
+
+    // Adds a label + component and styles the component like a text field
     private void addFormField(JPanel panel, GridBagConstraints gbc, int x, int y, String labelText,
+            JComponent component) {
+        TrackifyTheme.styleInput(component);
+        component.setPreferredSize(new Dimension(0, 30));
+        addFormRow(panel, gbc, x, y, labelText, component);
+    }
+
+    // Adds a label + component as-is (used for the date picker and category panel)
+    private void addFormRow(JPanel panel, GridBagConstraints gbc, int x, int y, String labelText,
             JComponent component) {
         gbc.gridx = x;
         gbc.gridy = y;
         panel.add(new JLabel(labelText + ":"), gbc);
 
-        TrackifyTheme.styleInput(component);
-        component.setPreferredSize(new Dimension(0, 30));
         gbc.gridx = x + 1;
         gbc.weightx = 1.0;
         panel.add(component, gbc);
@@ -252,13 +304,73 @@ public class TransactionsPanel extends JPanel {
         return button;
     }
 
+    // ===== Category helpers =====
+
+    private String[] currentCategories() {
+        return "INCOME".equals(typeCombo.getSelectedItem()) ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+    }
+
+    // Reloads the category list when the type (INCOME / EXPENSE) changes
+    private void loadCategories() {
+        categoryCombo.setModel(new DefaultComboBoxModel<>(currentCategories()));
+        updateOtherVisibility();
+    }
+
+    // Shows the text box only when "Others" is selected
+    private void updateOtherVisibility() {
+        boolean others = OTHERS.equals(categoryCombo.getSelectedItem());
+        otherCategoryField.setVisible(others);
+        if (!others)
+            otherCategoryField.setText("");
+        categoryPanel.revalidate();
+        categoryPanel.repaint();
+    }
+
+    // The category to save: the dropdown value, or the typed text if "Others"
+    private String getCategory() {
+        String selected = (String) categoryCombo.getSelectedItem();
+        if (!OTHERS.equals(selected))
+            return selected;
+
+        String custom = otherCategoryField.getText().trim();
+        if (custom.isEmpty())
+            throw new IllegalArgumentException("Please enter your category.");
+        for (String c : currentCategories()) {
+            if (!OTHERS.equals(c) && c.equalsIgnoreCase(custom))
+                return c;
+        }
+        return custom;
+    }
+
+    // Used when a row is selected: pick the category, or "Others" + its text
+    private void setCategory(String value) {
+        for (String c : currentCategories()) {
+            if (!OTHERS.equals(c) && c.equals(value)) {
+                categoryCombo.setSelectedItem(c);
+                return;
+            }
+        }
+        categoryCombo.setSelectedItem(OTHERS);
+        otherCategoryField.setText(value);
+    }
+
+    // The picked date as yyyy-MM-dd (what TransactionManager expects)
+    private String getDateText() {
+        LocalDate date = datePicker.getDate();
+        if (date == null)
+            throw new IllegalArgumentException("Please select a valid date (mm/dd/yyyy).");
+        return date.toString();
+    }
+
+    // ===== Actions =====
+
     private void addTransaction() {
         try {
             String name = nameField.getText().trim();
             String type = (String) typeCombo.getSelectedItem();
             double amount = Double.parseDouble(amountField.getText().trim());
-            String date = dateField.getText().trim();
-            String category = categoryField.getText().trim();
+            String date = getDateText();
+            String category = getCategory();
 
             manager.addTransaction(name, type, amount, date, category);
             clearForm();
@@ -281,8 +393,8 @@ public class TransactionsPanel extends JPanel {
             String name = nameField.getText().trim();
             String type = (String) typeCombo.getSelectedItem();
             double amount = Double.parseDouble(amountField.getText().trim());
-            String date = dateField.getText().trim();
-            String category = categoryField.getText().trim();
+            String date = getDateText();
+            String category = getCategory();
 
             manager.editTransaction(selectedId, name, type, amount, date, category);
             clearForm();
@@ -310,11 +422,62 @@ public class TransactionsPanel extends JPanel {
     }
 
     private void undoTransaction() {
-        if (manager.undoLastAction()) {
+        String message = manager.describeLastAction();
+        if (message == null) {
+            JOptionPane.showMessageDialog(this, "No recent action to undo.", "Undo", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        // show all rows, then highlight the row that will be affected
+        refreshTable();
+        table.setSelectionBackground(UNDO_HIGHLIGHT);
+        highlightRow(manager.getLastActionTransactionId());
+
+        boolean confirmed = confirmAtTop(message, "Confirm Undo");
+
+        table.setSelectionBackground(TrackifyTheme.SELECTION);
+        if (confirmed) {
+            manager.undoLastAction();
             clearForm();
         } else {
-            JOptionPane.showMessageDialog(this, "No recent action to undo.", "Undo", JOptionPane.INFORMATION_MESSAGE);
+            ignoreSelection = true;
+            table.clearSelection();
+            ignoreSelection = false;
         }
+    }
+
+    private void confirmClear() {
+        int confirm = JOptionPane.showConfirmDialog(this, "Clear all the fields?", "Confirm Clear",
+                JOptionPane.YES_NO_OPTION);
+        if (confirm == JOptionPane.YES_OPTION)
+            clearForm();
+    }
+
+    // Selects a row by ID without filling the form
+    private void highlightRow(int id) {
+        if (id < 0)
+            return;
+        for (int row = 0; row < tableModel.getRowCount(); row++) {
+            if ((int) tableModel.getValueAt(row, 0) == id) {
+                ignoreSelection = true;
+                table.setRowSelectionInterval(row, row);
+                ignoreSelection = false;
+                table.scrollRectToVisible(table.getCellRect(row, 0, true));
+                return;
+            }
+        }
+    }
+
+    // Yes/No popup placed near the top so it does not cover the table rows
+    private boolean confirmAtTop(String message, String title) {
+        JOptionPane pane = new JOptionPane(message, JOptionPane.QUESTION_MESSAGE, JOptionPane.YES_NO_OPTION);
+        JDialog dialog = pane.createDialog(this, title);
+        Window window = SwingUtilities.getWindowAncestor(this);
+        if (window != null)
+            dialog.setLocation(window.getX() + (window.getWidth() - dialog.getWidth()) / 2, window.getY() + 60);
+        dialog.setVisible(true);
+        dialog.dispose();
+        return Integer.valueOf(JOptionPane.YES_OPTION).equals(pane.getValue());
     }
 
     private void searchTransactions() {
@@ -330,7 +493,7 @@ public class TransactionsPanel extends JPanel {
         tableModel.setRowCount(0);
         for (Transaction t : transactions) {
             tableModel.addRow(new Object[] { t.getId(), t.getDescription(), t.getType(), t.getAmount(),
-                    t.getCategory(), t.getDate() });
+                    t.getCategory(), t.getDate().format(TransactionManager.DATE_FORMAT) });
         }
     }
 
@@ -339,6 +502,7 @@ public class TransactionsPanel extends JPanel {
         refreshSummary();
     }
 
+    // Called by MainFrame every time this screen is shown
     public void refresh() {
         clearForm();
     }
@@ -361,8 +525,8 @@ public class TransactionsPanel extends JPanel {
                 nameField.setText(t.getDescription());
                 typeCombo.setSelectedItem(t.getType());
                 amountField.setText(String.valueOf(t.getAmount()));
-                dateField.setText(t.getDate().toString());
-                categoryField.setText(t.getCategory());
+                datePicker.setDate(t.getDate());
+                setCategory(t.getCategory());
                 return;
             }
         }
@@ -372,9 +536,9 @@ public class TransactionsPanel extends JPanel {
         selectedId = -1;
         nameField.setText("");
         typeCombo.setSelectedIndex(0);
+        loadCategories();
         amountField.setText("");
-        dateField.setText("");
-        categoryField.setText("");
+        datePicker.setDate(LocalDate.now());
         searchField.setText("");
         table.clearSelection();
         refreshTable();
