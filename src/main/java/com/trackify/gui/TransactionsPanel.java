@@ -2,19 +2,19 @@ package com.trackify.gui;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.GridLayout;
 import java.awt.Insets;
 import java.util.List;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
-import javax.swing.JFrame;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -28,12 +28,8 @@ import javax.swing.table.DefaultTableModel;
 import com.trackify.manager.TransactionManager;
 import com.trackify.model.Transaction;
 
-public class TransactionsPanel extends JFrame {
-    private static final Color BLUE = new Color(30, 90, 130);
-    private static final Color GREEN = new Color(20, 140, 90);
-    private static final Color RED = new Color(205, 65, 65);
-    private static final Color GRAY = new Color(120, 126, 134);
-
+public class TransactionsPanel extends JPanel {
+    private final MainFrame frame;
     private final TransactionManager manager;
     private final DefaultTableModel tableModel;
     private final JTable table;
@@ -49,36 +45,38 @@ public class TransactionsPanel extends JFrame {
     private final JLabel topValue = new JLabel("N/A");
     private int selectedId = -1;
 
-    public TransactionsPanel(TransactionManager manager) {
+    public TransactionsPanel(MainFrame frame, TransactionManager manager) {
+        this.frame = frame;
         this.manager = manager;
 
-        setTitle("Trackify - Transactions");
-        setSize(1100, 700);
-        setMinimumSize(new Dimension(950, 650));
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setLocationRelativeTo(null);
+        setBackground(TrackifyTheme.CANVAS);
+        setBorder(BorderFactory.createEmptyBorder(0, 20, 18, 20));
         setLayout(new BorderLayout(12, 12));
 
         JPanel header = new JPanel(new BorderLayout());
-        header.setBackground(BLUE);
+        header.setBackground(TrackifyTheme.PRIMARY_DARK);
         header.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
 
         JLabel title = new JLabel("Transactions");
         title.setForeground(Color.WHITE);
         title.setFont(new Font("SansSerif", Font.BOLD, 28));
         header.add(title, BorderLayout.WEST);
-        add(header, BorderLayout.NORTH);
+
+        JButton backButton = TrackifyTheme.button("Back to Dashboard", TrackifyTheme.SURFACE,
+                TrackifyTheme.PRIMARY_DARK);
+        backButton.addActionListener(e -> backToDashboard());
+        header.add(backButton, BorderLayout.EAST);
 
         JPanel content = new JPanel(new BorderLayout(12, 12));
         content.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
 
-        JPanel formPanel = new JPanel(new GridBagLayout());
-        formPanel.setBorder(BorderFactory.createTitledBorder("Transaction Form"));
-        formPanel.setPreferredSize(new Dimension(480, 330));
+        JPanel formPanel = TrackifyTheme.sectionPanel("Transaction Form", new GridBagLayout());
+        formPanel.setPreferredSize(new Dimension(500, 300));
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(8, 8, 8, 8);
         gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.anchor = GridBagConstraints.NORTHWEST;
 
         addFormField(formPanel, gbc, 0, 0, "Name", nameField);
         addFormField(formPanel, gbc, 0, 1, "Type", typeCombo);
@@ -87,11 +85,11 @@ public class TransactionsPanel extends JFrame {
         addFormField(formPanel, gbc, 0, 4, "Category", categoryField);
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton addButton = makeButton("Add", BLUE);
-        JButton editButton = makeButton("Edit", BLUE);
-        JButton deleteButton = makeButton("Delete", RED);
-        JButton undoButton = makeButton("Undo", GRAY);
-        JButton clearButton = makeButton("Clear", GRAY);
+        JButton addButton = makeButton("Add", TrackifyTheme.PRIMARY);
+        JButton editButton = makeButton("Edit", TrackifyTheme.PRIMARY);
+        JButton deleteButton = makeButton("Delete", TrackifyTheme.RED);
+        JButton undoButton = makeButton("Undo", TrackifyTheme.MUTED);
+        JButton clearButton = makeButton("Clear", TrackifyTheme.MUTED);
 
         addButton.addActionListener(e -> addTransaction());
         editButton.addActionListener(e -> updateTransaction());
@@ -112,31 +110,63 @@ public class TransactionsPanel extends JFrame {
         formPanel.add(buttonPanel, gbc);
 
         JPanel rightPanel = new JPanel(new BorderLayout(8, 8));
-        JPanel summaryPanel = new JPanel(new GridBagLayout());
-        summaryPanel.setBorder(BorderFactory.createTitledBorder("Summary"));
+        rightPanel.setOpaque(false);
+        JPanel summaryPanel = TrackifyTheme.sectionPanel("Summary", new GridBagLayout());
 
         addSummaryRow(summaryPanel, 0, "Total Income:", incomeValue);
         addSummaryRow(summaryPanel, 1, "Total Expenses:", expenseValue);
         addSummaryRow(summaryPanel, 2, "Remaining Balance:", balanceValue);
-        addSummaryRow(summaryPanel, 3, "Top Category:", topValue);
-        incomeValue.setForeground(GREEN);
-        expenseValue.setForeground(RED);
+        addSummaryRow(summaryPanel, 3, "Top Categories:", topValue);
+        incomeValue.setForeground(TrackifyTheme.GREEN);
+        expenseValue.setForeground(TrackifyTheme.RED);
+        balanceValue.setForeground(TrackifyTheme.INK);
+        topValue.setForeground(TrackifyTheme.PRIMARY);
 
         GridBagConstraints filler = new GridBagConstraints();
         filler.gridy = 4;
         filler.weighty = 1.0;
         summaryPanel.add(new JPanel(), filler);
 
-        JPanel searchPanel = new JPanel(new BorderLayout(8, 8));
-        searchPanel.setBorder(BorderFactory.createTitledBorder("Search"));
+        JPanel searchPanel = TrackifyTheme.sectionPanel("Search", new BorderLayout(8, 8));
         searchPanel.add(new JLabel("Keyword: "), BorderLayout.WEST);
-        searchField.setPreferredSize(new Dimension(0, 30));
+        TrackifyTheme.styleInput(searchField);
         searchPanel.add(searchField, BorderLayout.CENTER);
-        JButton searchButton = makeButton("Search", BLUE);
+        JButton searchButton = makeButton("Search", TrackifyTheme.PRIMARY);
         searchButton.addActionListener(e -> searchTransactions());
         searchPanel.add(searchButton, BorderLayout.EAST);
 
-        rightPanel.add(searchPanel, BorderLayout.NORTH);
+        JButton resetButton = makeButton("Show All", TrackifyTheme.MUTED);
+        resetButton.setPreferredSize(new Dimension(106, 36));
+        resetButton.addActionListener(e -> {
+            searchField.setText("");
+            refreshTable();
+        });
+        JPanel searchActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        searchActions.setOpaque(false);
+        searchActions.add(resetButton);
+        searchPanel.add(searchActions, BorderLayout.SOUTH);
+
+        JPanel sortPanel = TrackifyTheme.sectionPanel("Sort", new FlowLayout(FlowLayout.LEFT, 8, 0));
+        JComboBox<String> sortField = new JComboBox<>(new String[] { "Date", "Amount" });
+        JComboBox<String> sortOrder = new JComboBox<>(new String[] { "Ascending", "Descending" });
+        TrackifyTheme.styleInput(sortField);
+        TrackifyTheme.styleInput(sortOrder);
+        JButton sortButton = makeButton("Apply", TrackifyTheme.PRIMARY);
+        sortButton.addActionListener(e -> {
+            String field = (String) sortField.getSelectedItem();
+            boolean ascending = "Ascending".equals(sortOrder.getSelectedItem());
+            //fillTable(manager.getSortedTransactions(field, ascending));
+        });
+        sortPanel.add(sortField);
+        sortPanel.add(sortOrder);
+        sortPanel.add(sortButton);
+
+        JPanel filters = new JPanel(new GridLayout(2, 1, 0, 8));
+        filters.setOpaque(false);
+        filters.add(searchPanel);
+        filters.add(sortPanel);
+
+        rightPanel.add(filters, BorderLayout.NORTH);
         rightPanel.add(summaryPanel, BorderLayout.CENTER);
 
         content.add(formPanel, BorderLayout.WEST);
@@ -152,7 +182,13 @@ public class TransactionsPanel extends JFrame {
         table = new JTable(tableModel);
         table.setRowHeight(28);
         table.setFillsViewportHeight(true);
+        table.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        table.setGridColor(TrackifyTheme.BORDER);
+        table.setSelectionBackground(TrackifyTheme.SELECTION);
+        table.setSelectionForeground(TrackifyTheme.INK);
         table.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 13));
+        table.getTableHeader().setBackground(TrackifyTheme.SURFACE);
+        table.getTableHeader().setForeground(TrackifyTheme.MUTED);
         table.getColumnModel().getColumn(0).setMaxWidth(80);
 
         DefaultTableCellRenderer rightAlign = new DefaultTableCellRenderer();
@@ -166,24 +202,26 @@ public class TransactionsPanel extends JFrame {
             }
         });
 
-        JPanel tablePanel = new JPanel(new BorderLayout());
-        tablePanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createEmptyBorder(0, 10, 10, 10),
-                BorderFactory.createTitledBorder("Transaction Records")));
+        JPanel tablePanel = TrackifyTheme.sectionPanel("Transaction Records", new BorderLayout());
         tablePanel.add(new JScrollPane(table), BorderLayout.CENTER);
 
-        add(content, BorderLayout.NORTH);
+        JPanel upper = new JPanel(new BorderLayout(12, 12));
+        upper.setOpaque(false);
+        upper.add(header, BorderLayout.NORTH);
+        upper.add(content, BorderLayout.CENTER);
+        add(upper, BorderLayout.NORTH);
         add(tablePanel, BorderLayout.CENTER);
 
         refreshTable();
     }
 
     private void addFormField(JPanel panel, GridBagConstraints gbc, int x, int y, String labelText,
-            java.awt.Component component) {
+            JComponent component) {
         gbc.gridx = x;
         gbc.gridy = y;
         panel.add(new JLabel(labelText + ":"), gbc);
 
+        TrackifyTheme.styleInput(component);
         component.setPreferredSize(new Dimension(0, 30));
         gbc.gridx = x + 1;
         gbc.weightx = 1.0;
@@ -197,8 +235,7 @@ public class TransactionsPanel extends JFrame {
         c.gridy = row;
         c.anchor = GridBagConstraints.WEST;
 
-        JLabel label = new JLabel(labelText);
-        label.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        JLabel label = TrackifyTheme.label(labelText, 14, Font.PLAIN, TrackifyTheme.INK);
         c.gridx = 0;
         c.weightx = 0;
         panel.add(label, c);
@@ -210,15 +247,8 @@ public class TransactionsPanel extends JFrame {
     }
 
     private JButton makeButton(String text, Color background) {
-        JButton button = new JButton(text);
-        button.setBackground(background);
-        button.setForeground(Color.WHITE);
-        button.setFont(new Font("SansSerif", Font.BOLD, 13));
-        button.setOpaque(true);
-        button.setBorderPainted(false);
-        button.setFocusPainted(false);
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        button.setPreferredSize(new Dimension(78, 32));
+        JButton button = TrackifyTheme.button(text, background, Color.WHITE);
+        button.setPreferredSize(new Dimension(82, 34));
         return button;
     }
 
@@ -232,8 +262,10 @@ public class TransactionsPanel extends JFrame {
 
             manager.addTransaction(name, type, amount, date, category);
             clearForm();
-            refreshTable();
-        } catch (Exception ex) {
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Amount must be a valid number.", "Invalid Input",
+                    JOptionPane.ERROR_MESSAGE);
+        } catch (IllegalArgumentException ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Invalid Input", JOptionPane.ERROR_MESSAGE);
         }
     }
@@ -254,8 +286,10 @@ public class TransactionsPanel extends JFrame {
 
             manager.editTransaction(selectedId, name, type, amount, date, category);
             clearForm();
-            refreshTable();
-        } catch (Exception ex) {
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Amount must be a valid number.", "Update Error",
+                    JOptionPane.ERROR_MESSAGE);
+        } catch (IllegalArgumentException ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Update Error", JOptionPane.ERROR_MESSAGE);
         }
     }
@@ -272,14 +306,12 @@ public class TransactionsPanel extends JFrame {
         if (confirm == JOptionPane.YES_OPTION) {
             manager.deleteTransaction(selectedId);
             clearForm();
-            refreshTable();
         }
     }
 
     private void undoTransaction() {
         if (manager.undoLastAction()) {
             clearForm();
-            refreshTable();
         } else {
             JOptionPane.showMessageDialog(this, "No recent action to undo.", "Undo", JOptionPane.INFORMATION_MESSAGE);
         }
@@ -287,27 +319,40 @@ public class TransactionsPanel extends JFrame {
 
     private void searchTransactions() {
         List<Transaction> matches = manager.searchTransactions(searchField.getText());
+        fillTable(matches);
+        if (matches.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No matching transactions.", "Search",
+                    JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+
+    private void fillTable(List<Transaction> transactions) {
         tableModel.setRowCount(0);
-        for (Transaction t : matches) {
-            tableModel.addRow(new Object[] { t.getId(), t.getDescription(), t.getType(), t.getAmount(), t.getCategory(),
-                    t.getDate() });
+        for (Transaction t : transactions) {
+            tableModel.addRow(new Object[] { t.getId(), t.getDescription(), t.getType(), t.getAmount(),
+                    t.getCategory(), t.getDate() });
         }
     }
 
     private void refreshTable() {
-        tableModel.setRowCount(0);
-        for (Transaction t : manager.getTransactions()) {
-            tableModel.addRow(new Object[] { t.getId(), t.getDescription(), t.getType(), t.getAmount(), t.getCategory(),
-                    t.getDate() });
-        }
+        fillTable(manager.getTransactions());
         refreshSummary();
+    }
+
+    public void refresh() {
+        clearForm();
+    }
+
+    private void backToDashboard() {
+        frame.showDashboard();
     }
 
     private void refreshSummary() {
         incomeValue.setText("PHP " + String.format("%,.2f", manager.getTotalIncome()));
         expenseValue.setText("PHP " + String.format("%,.2f", manager.getTotalExpenses()));
         balanceValue.setText("PHP " + String.format("%,.2f", manager.getRemainingBalance()));
-        topValue.setText(manager.getTopSpendingCategory());
+        List<String> topCategories = manager.getTopCategories();
+        topValue.setText(topCategories.isEmpty() ? "N/A" : String.join(", ", topCategories));
     }
 
     private void fillFormFromSelected(int id) {

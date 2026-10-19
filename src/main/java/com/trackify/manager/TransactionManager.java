@@ -2,6 +2,8 @@ package com.trackify.manager;
 
 import com.trackify.dao.TransactionDAO;
 import com.trackify.model.Transaction;
+import java.time.YearMonth;
+import com.trackify.util.SortUtil;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
@@ -88,7 +90,7 @@ public class TransactionManager {
         switch (a.kind()) {
             case "ADD" -> dao.deleteTransaction(a.data().getId(), userId);
             case "EDIT" -> dao.updateTransaction(a.data());
-            case "DELETE" -> dao.addTransaction(a.data());
+            case "DELETE" -> dao.restoreTransaction(a.data());
         }
         reload();
         return true;
@@ -127,7 +129,7 @@ public class TransactionManager {
         return getTotalIncome() - getTotalExpenses();
     }
 
-    public String getTopSpendingCategory() {
+    public List<String> getTopCategories() {
         Map<String, Double> totals = new HashMap<>();
         for (Transaction t : transactions) {
             if (t.getType().equals("EXPENSE"))
@@ -136,6 +138,28 @@ public class TransactionManager {
         PriorityQueue<Map.Entry<String, Double>> pq = new PriorityQueue<>(
                 (a, b) -> Double.compare(b.getValue(), a.getValue()));
         pq.addAll(totals.entrySet());
-        return pq.isEmpty() ? "N/A" : pq.peek().getKey();
+
+        List<String> top = new ArrayList<>();
+        for (int i = 0; i < 3 && !pq.isEmpty(); i++)
+            top.add(pq.poll().getKey());
+        return top;
     }
+
+    public Map<YearMonth, Double> getMonthlyExpenses() {
+        Map<YearMonth, Double> monthly = new TreeMap<>(Comparator.reverseOrder());
+        for (Transaction t : transactions) {
+            if (t.getType().equals("EXPENSE"))
+                monthly.merge(YearMonth.from(t.getDate()), t.getAmount(), Double::sum);
+        }
+        return monthly;
+    }
+
+    // public List<Transaction> getSortedTransactions(String field, boolean ascending) {
+    //     Comparator<Transaction> cmp = field.equals("Amount")
+    //             ? Comparator.comparingDouble(Transaction::getAmount)
+    //             : Comparator.comparing(Transaction::getDate);
+    //     if (!ascending)
+    //         cmp = cmp.reversed();
+    //     // return SortUtil.mergeSort(transactions, cmp);
+    // }
 }

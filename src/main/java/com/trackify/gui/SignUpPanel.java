@@ -1,7 +1,7 @@
 package com.trackify.gui;
 
+import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
@@ -9,40 +9,32 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 
 import javax.swing.JButton;
-import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
-import javax.swing.border.EmptyBorder;
 
 import com.trackify.dao.UserDAO;
-import com.trackify.manager.TransactionManager;
 
-public class SignUpPanel extends JFrame {
-    private static final Color BLUE = new Color(30, 90, 130);
-    private static final Color BACKGROUND = new Color(246, 247, 249);
-    private static final Color GRAY_TEXT = new Color(120, 126, 134);
-
-    private final TransactionManager manager;
+public class SignUpPanel extends JPanel {
+    private final MainFrame frame;
     private final JTextField usernameField = new JTextField();
     private final JPasswordField passwordField = new JPasswordField();
     private final JPasswordField confirmField = new JPasswordField();
+    private final JButton signUpButton;
 
-    public SignUpPanel(TransactionManager manager) {
-        this.manager = manager;
+    public SignUpPanel(MainFrame frame) {
+        this.frame = frame;
 
-        setTitle("Trackify - Sign Up");
-        setSize(420, 560);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLocationRelativeTo(null);
-        setResizable(false);
-
-        JPanel root = new JPanel(new GridBagLayout());
-        root.setBackground(BACKGROUND);
-        root.setBorder(new EmptyBorder(30, 40, 30, 40));
-        setContentPane(root);
+        setLayout(new BorderLayout());
+        setBackground(TrackifyTheme.CANVAS);
+        JPanel root = TrackifyTheme.surfacePanel(new GridBagLayout(), new Insets(30, 44, 30, 44));
+        root.setPreferredSize(new Dimension(430, 550));
+        JPanel centered = new JPanel(new GridBagLayout());
+        centered.setOpaque(false);
+        centered.add(root);
+        add(centered, BorderLayout.CENTER);
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = 0;
@@ -50,48 +42,40 @@ public class SignUpPanel extends JFrame {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(6, 0, 6, 0);
 
-        usernameField.setPreferredSize(new Dimension(0, 36));
-        passwordField.setPreferredSize(new Dimension(0, 36));
-        confirmField.setPreferredSize(new Dimension(0, 36));
+        TrackifyTheme.styleInput(usernameField);
+        TrackifyTheme.styleInput(passwordField);
+        TrackifyTheme.styleInput(confirmField);
 
-        JButton signUpButton = new JButton("Create Account");
-        signUpButton.setBackground(BLUE);
-        signUpButton.setForeground(Color.WHITE);
-        signUpButton.setFont(new Font("SansSerif", Font.BOLD, 14));
-        signUpButton.setOpaque(true);
-        signUpButton.setBorderPainted(false);
-        signUpButton.setFocusPainted(false);
-        signUpButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        signUpButton.setPreferredSize(new Dimension(0, 42));
+        signUpButton = TrackifyTheme.button("Create Account", TrackifyTheme.PRIMARY, Color.WHITE);
+        signUpButton.setPreferredSize(new Dimension(0, 44));
         signUpButton.addActionListener(e -> signUp());
 
-        JButton backButton = new JButton("Already have an account? Log In");
-        backButton.setForeground(BLUE);
+        JButton backButton = TrackifyTheme.button("Already have an account? Log In", TrackifyTheme.SURFACE,
+            TrackifyTheme.PRIMARY);
         backButton.setContentAreaFilled(false);
         backButton.setBorderPainted(false);
         backButton.setFocusPainted(false);
-        backButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         backButton.addActionListener(e -> backToLogin());
 
         gbc.gridy = 0;
-        root.add(makeLabel("Trackify", 32, Font.BOLD, BLUE), gbc);
+        root.add(makeLabel("Trackify", 32, Font.BOLD, TrackifyTheme.PRIMARY), gbc);
         gbc.gridy = 1;
-        root.add(makeLabel("Create a new account", 14, Font.PLAIN, GRAY_TEXT), gbc);
+        root.add(makeLabel("Create a new account", 14, Font.PLAIN, TrackifyTheme.MUTED), gbc);
         gbc.gridy = 2;
         gbc.insets = new Insets(24, 0, 2, 0);
-        root.add(makeLabel("Username", 13, Font.BOLD, GRAY_TEXT), gbc);
+        root.add(makeLabel("Username", 13, Font.BOLD, TrackifyTheme.INK), gbc);
         gbc.gridy = 3;
         gbc.insets = new Insets(2, 0, 6, 0);
         root.add(usernameField, gbc);
         gbc.gridy = 4;
         gbc.insets = new Insets(10, 0, 2, 0);
-        root.add(makeLabel("Password", 13, Font.BOLD, GRAY_TEXT), gbc);
+        root.add(makeLabel("Password", 13, Font.BOLD, TrackifyTheme.INK), gbc);
         gbc.gridy = 5;
         gbc.insets = new Insets(2, 0, 6, 0);
         root.add(passwordField, gbc);
         gbc.gridy = 6;
         gbc.insets = new Insets(10, 0, 2, 0);
-        root.add(makeLabel("Confirm Password", 13, Font.BOLD, GRAY_TEXT), gbc);
+        root.add(makeLabel("Confirm Password", 13, Font.BOLD, TrackifyTheme.INK), gbc);
         gbc.gridy = 7;
         gbc.insets = new Insets(2, 0, 6, 0);
         root.add(confirmField, gbc);
@@ -102,14 +86,14 @@ public class SignUpPanel extends JFrame {
         gbc.insets = new Insets(6, 0, 6, 0);
         root.add(backButton, gbc);
 
-        getRootPane().setDefaultButton(signUpButton);
+    }
+
+    JButton getDefaultButton() {
+        return signUpButton;
     }
 
     private JLabel makeLabel(String text, int size, int style, Color color) {
-        JLabel label = new JLabel(text);
-        label.setFont(new Font("SansSerif", style, size));
-        label.setForeground(color);
-        return label;
+        return TrackifyTheme.label(text, size, style, color);
     }
 
     private void signUp() {
@@ -154,7 +138,12 @@ public class SignUpPanel extends JFrame {
     }
 
     private void backToLogin() {
-        new LoginPanel(manager).setVisible(true);
-        dispose();
+        frame.showLogin();
+    }
+
+    public void clearFields() {
+        usernameField.setText("");
+        passwordField.setText("");
+        confirmField.setText("");
     }
 }
