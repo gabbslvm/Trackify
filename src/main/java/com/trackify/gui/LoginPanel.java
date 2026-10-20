@@ -1,95 +1,71 @@
 package com.trackify.gui;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
-
-import javax.swing.JButton;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JPasswordField;
-import javax.swing.JTextField;
-
 import com.trackify.dao.UserDAO;
 import com.trackify.manager.TransactionManager;
 import com.trackify.model.User;
+import java.awt.*;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 
 public class LoginPanel extends JPanel {
     private final MainFrame frame;
     private final TransactionManager manager;
     private final JTextField usernameField = new JTextField();
     private final JPasswordField passwordField = new JPasswordField();
-    private final JButton loginButton;
+    private final JLabel messageLabel = MainFrame.label(" ", 12, Font.PLAIN, MainFrame.RED);
+    private final JButton loginButton = MainFrame.button("Log In", MainFrame.BLUE, Color.WHITE);
 
     public LoginPanel(MainFrame frame, TransactionManager manager) {
         this.frame = frame;
         this.manager = manager;
-
         setLayout(new BorderLayout());
-        setBackground(TrackifyTheme.CANVAS);
-        JPanel root = TrackifyTheme.surfacePanel(new GridBagLayout(), new Insets(36, 44, 36, 44));
-        root.setPreferredSize(new Dimension(430, 470));
-        JPanel centered = new JPanel(new GridBagLayout());
-        centered.setOpaque(false);
-        centered.add(root);
-        add(centered, BorderLayout.CENTER);
+        setBackground(Color.WHITE);
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.weightx = 1.0;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(6, 0, 6, 0);
+        add(MainFrame.authBrand(
+                "<html>A clearer view<br>of your money.</html>",
+                "<html>Keep your income, expenses, and<br>everyday decisions in one place.</html>"),
+                BorderLayout.WEST);
 
-        TrackifyTheme.styleInput(usernameField);
-        TrackifyTheme.styleInput(passwordField);
+        JPanel wrapper = new JPanel(new GridBagLayout());
+        wrapper.setBackground(Color.WHITE);
+        wrapper.setBorder(new EmptyBorder(30, 35, 30, 35));
+        JPanel form = MainFrame.transparent(new GridBagLayout());
+        GridBagConstraints c = new GridBagConstraints();
+        c.gridx = 0;
+        c.weightx = 1;
+        c.fill = GridBagConstraints.HORIZONTAL;
 
-        loginButton = TrackifyTheme.button("Log In", TrackifyTheme.PRIMARY, Color.WHITE);
-        loginButton.setPreferredSize(new Dimension(0, 44));
+        c.gridy = 0;
+        form.add(MainFrame.label("LET'S PICK UP WHERE YOU LEFT OFF", 10, Font.BOLD, MainFrame.MUTED), c);
+        c.gridy = 1;
+        c.insets = new Insets(10, 0, 4, 0);
+        form.add(MainFrame.label("Welcome back.", 28, Font.BOLD, MainFrame.TEXT), c);
+        c.gridy = 2;
+        c.insets = new Insets(0, 0, 28, 0);
+        String description = manager.isDemoMode()
+                ? "Preview mode: enter any username and password."
+                : "Log in to see your financial overview.";
+        form.add(MainFrame.label(description, 13, Font.PLAIN, MainFrame.MUTED), c);
+        c.gridy = 3;
+        c.insets = new Insets(0, 0, 18, 0);
+        form.add(MainFrame.formRow("Username", usernameField), c);
+        c.gridy = 4;
+        form.add(MainFrame.formRow("Password", passwordField), c);
+        c.gridy = 5;
+        c.insets = new Insets(0, 0, 10, 0);
+        form.add(messageLabel, c);
+        c.gridy = 6;
         loginButton.addActionListener(e -> login());
+        form.add(loginButton, c);
 
-        JButton signUpButton = TrackifyTheme.button("Don't have an account? Sign Up", TrackifyTheme.SURFACE,
-            TrackifyTheme.PRIMARY);
-        signUpButton.setContentAreaFilled(false);
-        signUpButton.setBorderPainted(false);
-        signUpButton.setFocusPainted(false);
-        signUpButton.addActionListener(e -> openSignUp());
+        JButton signUpButton = MainFrame.button("New to Trackify? Create an account", Color.WHITE, MainFrame.BLUE);
+        signUpButton.addActionListener(e -> frame.showScreen("SIGNUP"));
+        c.gridy = 7;
+        c.insets = new Insets(8, 0, 0, 0);
+        form.add(signUpButton, c);
 
-        gbc.gridy = 0;
-        root.add(makeLabel("Trackify", 32, Font.BOLD, TrackifyTheme.PRIMARY), gbc);
-        gbc.gridy = 1;
-        root.add(makeLabel("Log in to your account", 14, Font.PLAIN, TrackifyTheme.MUTED), gbc);
-        gbc.gridy = 2;
-        gbc.insets = new Insets(24, 0, 2, 0);
-        root.add(makeLabel("Username", 13, Font.BOLD, TrackifyTheme.INK), gbc);
-        gbc.gridy = 3;
-        gbc.insets = new Insets(2, 0, 6, 0);
-        root.add(usernameField, gbc);
-        gbc.gridy = 4;
-        gbc.insets = new Insets(10, 0, 2, 0);
-        root.add(makeLabel("Password", 13, Font.BOLD, TrackifyTheme.INK), gbc);
-        gbc.gridy = 5;
-        gbc.insets = new Insets(2, 0, 6, 0);
-        root.add(passwordField, gbc);
-        gbc.gridy = 6;
-        gbc.insets = new Insets(20, 0, 6, 0);
-        root.add(loginButton, gbc);
-        gbc.gridy = 7;
-        gbc.insets = new Insets(6, 0, 6, 0);
-        root.add(signUpButton, gbc);
-
-    }
-
-    JButton getDefaultButton() {
-        return loginButton;
-    }
-
-    private JLabel makeLabel(String text, int size, int style, Color color) {
-        return TrackifyTheme.label(text, size, style, color);
+        wrapper.add(form);
+        add(wrapper, BorderLayout.CENTER);
     }
 
     private void login() {
@@ -97,29 +73,39 @@ public class LoginPanel extends JPanel {
         String password = new String(passwordField.getPassword());
 
         if (username.isEmpty() || password.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please enter your username and password.",
-                    "Missing Input", JOptionPane.WARNING_MESSAGE);
+            showMessage("Please enter your username and password.", MainFrame.RED);
             return;
         }
 
-        User user = new UserDAO().validateLogin(username, password);
-        if (user == null) {
-            JOptionPane.showMessageDialog(this, "Invalid username or password.",
-                    "Login Failed", JOptionPane.ERROR_MESSAGE);
-            passwordField.setText("");
-            return;
+        int userId;
+        if (manager.isDemoMode()) {
+            userId = 1;
+        } else {
+            User user = new UserDAO().validateLogin(username, password);
+            if (user == null) {
+                showMessage("Invalid username or password.", MainFrame.RED);
+                passwordField.setText("");
+                return;
+            }
+            userId = user.getId();
         }
 
-        manager.setUserId(user.getId());
-        frame.showDashboard();
-    }
-
-    private void openSignUp() {
-        frame.showSignUp();
+        manager.setUserId(userId);
+        frame.showScreen("DASHBOARD");
     }
 
     public void clearFields() {
         usernameField.setText("");
         passwordField.setText("");
+        showMessage(" ", MainFrame.RED);
+    }
+
+    public void showMessage(String message, Color color) {
+        messageLabel.setForeground(color);
+        messageLabel.setText(message);
+    }
+
+    JButton getLoginButton() {
+        return loginButton;
     }
 }

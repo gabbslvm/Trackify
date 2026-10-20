@@ -166,7 +166,13 @@ public class TransactionManager {
         return getTotalIncome() - getTotalExpenses();
     }
 
-    public List<String> getTopCategories() {
+        // Demo mode is not used in the final app (database is always required)
+    public boolean isDemoMode() {
+        return false;
+    }
+
+    // Top N expense categories with their totals (used by the Dashboard)
+    public List<Map.Entry<String, Double>> getTopCategories(int limit) {
         Map<String, Double> totals = new HashMap<>();
         for (Transaction t : transactions) {
             if (t.getType().equals("EXPENSE"))
@@ -176,10 +182,18 @@ public class TransactionManager {
                 (a, b) -> Double.compare(b.getValue(), a.getValue()));
         pq.addAll(totals.entrySet());
 
-        List<String> top = new ArrayList<>();
-        for (int i = 0; i < 3 && !pq.isEmpty(); i++)
-            top.add(pq.poll().getKey());
+        List<Map.Entry<String, Double>> top = new ArrayList<>();
+        for (int i = 0; i < limit && !pq.isEmpty(); i++)
+            top.add(pq.poll());
         return top;
+    }
+
+    // Top 3 category names (used by the Transactions screen summary)
+    public List<String> getTopCategories() {
+        List<String> names = new ArrayList<>();
+        for (Map.Entry<String, Double> e : getTopCategories(3))
+            names.add(e.getKey());
+        return names;
     }
 
     public Map<YearMonth, Double> getMonthlyExpenses() {

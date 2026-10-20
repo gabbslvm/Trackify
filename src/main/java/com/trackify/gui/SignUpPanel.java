@@ -1,99 +1,70 @@
 package com.trackify.gui;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
-
-import javax.swing.JButton;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JPasswordField;
-import javax.swing.JTextField;
-
 import com.trackify.dao.UserDAO;
+import com.trackify.manager.TransactionManager;
+import java.awt.*;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 
 public class SignUpPanel extends JPanel {
     private final MainFrame frame;
+    private final TransactionManager manager;
     private final JTextField usernameField = new JTextField();
     private final JPasswordField passwordField = new JPasswordField();
     private final JPasswordField confirmField = new JPasswordField();
-    private final JButton signUpButton;
+    private final JLabel messageLabel = MainFrame.label(" ", 12, Font.PLAIN, MainFrame.RED);
+    private final JButton signUpButton = MainFrame.button("Create Account", MainFrame.BLUE, Color.WHITE);
 
-    public SignUpPanel(MainFrame frame) {
+    public SignUpPanel(MainFrame frame, TransactionManager manager) {
         this.frame = frame;
-
+        this.manager = manager;
         setLayout(new BorderLayout());
-        setBackground(TrackifyTheme.CANVAS);
-        JPanel root = TrackifyTheme.surfacePanel(new GridBagLayout(), new Insets(30, 44, 30, 44));
-        root.setPreferredSize(new Dimension(430, 550));
-        JPanel centered = new JPanel(new GridBagLayout());
-        centered.setOpaque(false);
-        centered.add(root);
-        add(centered, BorderLayout.CENTER);
+        setBackground(Color.WHITE);
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.weightx = 1.0;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(6, 0, 6, 0);
+        add(MainFrame.authBrand(
+                "<html>Small habits.<br>Clearer finances.</html>",
+                "<html>Track what comes in, what goes out,<br>and what stays with you.</html>"),
+                BorderLayout.WEST);
 
-        TrackifyTheme.styleInput(usernameField);
-        TrackifyTheme.styleInput(passwordField);
-        TrackifyTheme.styleInput(confirmField);
+        JPanel wrapper = new JPanel(new GridBagLayout());
+        wrapper.setBackground(Color.WHITE);
+        wrapper.setBorder(new EmptyBorder(24, 35, 24, 35));
+        JPanel form = MainFrame.transparent(new GridBagLayout());
+        GridBagConstraints c = new GridBagConstraints();
+        c.gridx = 0;
+        c.weightx = 1;
+        c.fill = GridBagConstraints.HORIZONTAL;
 
-        signUpButton = TrackifyTheme.button("Create Account", TrackifyTheme.PRIMARY, Color.WHITE);
-        signUpButton.setPreferredSize(new Dimension(0, 44));
+        c.gridy = 0;
+        form.add(MainFrame.label("YOUR NEXT GOOD HABIT", 10, Font.BOLD, MainFrame.MUTED), c);
+        c.gridy = 1;
+        c.insets = new Insets(10, 0, 4, 0);
+        form.add(MainFrame.label("Make a fresh start.", 28, Font.BOLD, MainFrame.TEXT), c);
+        c.gridy = 2;
+        c.insets = new Insets(0, 0, 22, 0);
+        form.add(MainFrame.label("Create your personal Trackify account.", 13, Font.PLAIN, MainFrame.MUTED), c);
+        c.gridy = 3;
+        c.insets = new Insets(0, 0, 15, 0);
+        form.add(MainFrame.formRow("Username", usernameField), c);
+        c.gridy = 4;
+        form.add(MainFrame.formRow("Password", passwordField), c);
+        c.gridy = 5;
+        form.add(MainFrame.formRow("Confirm password", confirmField), c);
+        c.gridy = 6;
+        c.insets = new Insets(0, 0, 8, 0);
+        form.add(messageLabel, c);
+        c.gridy = 7;
         signUpButton.addActionListener(e -> signUp());
+        form.add(signUpButton, c);
 
-        JButton backButton = TrackifyTheme.button("Already have an account? Log In", TrackifyTheme.SURFACE,
-            TrackifyTheme.PRIMARY);
-        backButton.setContentAreaFilled(false);
-        backButton.setBorderPainted(false);
-        backButton.setFocusPainted(false);
-        backButton.addActionListener(e -> backToLogin());
+        JButton backButton = MainFrame.button("Already have an account? Log in", Color.WHITE, MainFrame.BLUE);
+        backButton.addActionListener(e -> frame.showScreen("LOGIN"));
+        c.gridy = 8;
+        c.insets = new Insets(6, 0, 0, 0);
+        form.add(backButton, c);
 
-        gbc.gridy = 0;
-        root.add(makeLabel("Trackify", 32, Font.BOLD, TrackifyTheme.PRIMARY), gbc);
-        gbc.gridy = 1;
-        root.add(makeLabel("Create a new account", 14, Font.PLAIN, TrackifyTheme.MUTED), gbc);
-        gbc.gridy = 2;
-        gbc.insets = new Insets(24, 0, 2, 0);
-        root.add(makeLabel("Username", 13, Font.BOLD, TrackifyTheme.INK), gbc);
-        gbc.gridy = 3;
-        gbc.insets = new Insets(2, 0, 6, 0);
-        root.add(usernameField, gbc);
-        gbc.gridy = 4;
-        gbc.insets = new Insets(10, 0, 2, 0);
-        root.add(makeLabel("Password", 13, Font.BOLD, TrackifyTheme.INK), gbc);
-        gbc.gridy = 5;
-        gbc.insets = new Insets(2, 0, 6, 0);
-        root.add(passwordField, gbc);
-        gbc.gridy = 6;
-        gbc.insets = new Insets(10, 0, 2, 0);
-        root.add(makeLabel("Confirm Password", 13, Font.BOLD, TrackifyTheme.INK), gbc);
-        gbc.gridy = 7;
-        gbc.insets = new Insets(2, 0, 6, 0);
-        root.add(confirmField, gbc);
-        gbc.gridy = 8;
-        gbc.insets = new Insets(20, 0, 6, 0);
-        root.add(signUpButton, gbc);
-        gbc.gridy = 9;
-        gbc.insets = new Insets(6, 0, 6, 0);
-        root.add(backButton, gbc);
-
-    }
-
-    JButton getDefaultButton() {
-        return signUpButton;
-    }
-
-    private JLabel makeLabel(String text, int size, int style, Color color) {
-        return TrackifyTheme.label(text, size, style, color);
+        wrapper.add(form);
+        add(wrapper, BorderLayout.CENTER);
     }
 
     private void signUp() {
@@ -102,48 +73,50 @@ public class SignUpPanel extends JPanel {
         String confirm = new String(confirmField.getPassword());
 
         if (username.isEmpty() || password.isEmpty() || confirm.isEmpty()) {
-            showError("Please fill in all fields.");
+            messageLabel.setText("Please fill in all fields.");
             return;
         }
         if (username.length() < 3) {
-            showError("Username must be at least 3 characters.");
+            messageLabel.setText("Username must be at least 3 characters.");
             return;
         }
         if (password.length() < 6) {
-            showError("Password must be at least 6 characters.");
+            messageLabel.setText("Password must be at least 6 characters.");
             return;
         }
         if (!password.equals(confirm)) {
-            showError("Passwords do not match.");
+            messageLabel.setText("Passwords do not match.");
+            return;
+        }
+
+        if (manager.isDemoMode()) {
+            frame.showScreen("LOGIN");
+            frame.showLoginMessage("Preview account created. Log in with any username and password.");
             return;
         }
 
         UserDAO dao = new UserDAO();
         if (dao.usernameExists(username)) {
-            showError("Username is already taken.");
+            messageLabel.setText("Username is already taken.");
             return;
         }
         if (!dao.registerUser(username, password)) {
-            showError("Could not create the account. Please try again.");
+            messageLabel.setText("Could not create the account. Please try again.");
             return;
         }
 
-        JOptionPane.showMessageDialog(this, "Account created! You can now log in.",
-                "Success", JOptionPane.INFORMATION_MESSAGE);
-        backToLogin();
-    }
-
-    private void showError(String message) {
-        JOptionPane.showMessageDialog(this, message, "Sign Up Error", JOptionPane.ERROR_MESSAGE);
-    }
-
-    private void backToLogin() {
-        frame.showLogin();
+        frame.showScreen("LOGIN");
+        frame.showLoginMessage("Account created. You can now log in.");
     }
 
     public void clearFields() {
         usernameField.setText("");
         passwordField.setText("");
         confirmField.setText("");
+        messageLabel.setText(" ");
+    }
+
+    JButton getSignUpButton() {
+        return signUpButton;
     }
 }
