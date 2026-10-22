@@ -6,6 +6,7 @@ import com.trackify.util.SortUtil;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -17,22 +18,17 @@ import java.util.Stack;
 import java.util.TreeMap;
 
 public class TransactionManager {
+    public static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("MM/dd/yyyy");
+
     private final TransactionDAO dao = new TransactionDAO();
     private List<Transaction> transactions = new ArrayList<>();
     private final Stack<UndoAction> undoStack = new Stack<>();
     private int userId;
 
-
     public void setUserId(int userId) {
         this.userId = userId;
         undoStack.clear();
         reload();
-    }
-
-    public void clear() {
-        userId = 0;
-        transactions = new ArrayList<>();
-        undoStack.clear();
     }
 
     private void reload() {
@@ -65,7 +61,6 @@ public class TransactionManager {
         return new Transaction(id, userId, type, category, amount, d, name);
     }
 
-
     public void addTransaction(String name, String type, double amount, String date, String category) {
         Transaction t = build(0, name, type, amount, date, category);
         if (!dao.addTransaction(t))
@@ -95,11 +90,23 @@ public class TransactionManager {
         }
     }
 
+    public String describeLastAction() {
+        if (undoStack.isEmpty())
+            return null;
+        return undoStack.peek().describe();
+    }
+
+    public int getLastActionTransactionId() {
+        if (undoStack.isEmpty())
+            return -1;
+        return undoStack.peek().getTransactionId();
+    }
+
     public boolean undoLastAction() {
         if (undoStack.isEmpty())
             return false;
         UndoAction a = undoStack.pop();
-        a.undo(dao, userId); 
+        a.undo(dao, userId);
         reload();
         return true;
     }
@@ -116,7 +123,7 @@ public class TransactionManager {
         return result;
     }
 
-    public List<Transaction> sortTransactions(String field, boolean ascending) {
+    public List<Transaction> getSortedTransactions(String field, boolean ascending) {
         List<Transaction> copy = new ArrayList<>(transactions);
         if ("amount".equalsIgnoreCase(field)) {
             SortUtil.mergeSort(copy, SortUtil.byAmount(ascending));
@@ -175,5 +182,13 @@ public class TransactionManager {
             top.add(pq.poll());
         }
         return top;
+    }
+
+    public List<String> getTopCategories() {
+        List<String> names = new ArrayList<>();
+        for (Map.Entry<String, Double> e : getTopCategories(3)) {
+            names.add(e.getKey());
+        }
+        return names;
     }
 }

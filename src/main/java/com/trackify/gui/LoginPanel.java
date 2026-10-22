@@ -42,10 +42,7 @@ public class LoginPanel extends JPanel {
         form.add(MainFrame.label("Welcome back.", 28, Font.BOLD, MainFrame.TEXT), c);
         c.gridy = 2;
         c.insets = new Insets(0, 0, 28, 0);
-        String description = manager.isDemoMode()
-                ? "Preview mode: enter any username and password."
-                : "Log in to see your financial overview.";
-        form.add(MainFrame.label(description, 13, Font.PLAIN, MainFrame.MUTED), c);
+        form.add(MainFrame.label("Log in to see your financial overview.", 13, Font.PLAIN, MainFrame.MUTED), c);
         c.gridy = 3;
         c.insets = new Insets(0, 0, 18, 0);
         form.add(MainFrame.formRow("Username", usernameField), c);
@@ -77,20 +74,14 @@ public class LoginPanel extends JPanel {
             return;
         }
 
-        int userId;
-        if (manager.isDemoMode()) {
-            userId = 1;
-        } else {
-            User user = new UserDAO().validateLogin(username, password);
-            if (user == null) {
-                showMessage("Invalid username or password.", MainFrame.RED);
-                passwordField.setText("");
-                return;
-            }
-            userId = user.getId();
+        User user = new UserDAO().validateLogin(username, password);
+        if (user == null) {
+            showMessage("Invalid username or password.", MainFrame.RED);
+            passwordField.setText("");
+            return;
         }
 
-        manager.setUserId(userId);
+        manager.setUserId(user.getId());
         frame.showScreen("DASHBOARD");
     }
 

@@ -19,8 +19,10 @@ public class DashboardPanel extends JPanel {
     private final JLabel balanceValue = MainFrame.label("PHP 0.00", 54, Font.BOLD, Color.WHITE);
     private final JLabel topCategory = MainFrame.label("N/A", 30, Font.BOLD, MainFrame.TEXT);
     private final JLabel topAmount = MainFrame.label("No expenses yet", 13, Font.PLAIN, MainFrame.MUTED);
-    private final MainFrame.RoundedPanel balanceCard = new MainFrame.RoundedPanel(new BorderLayout(0, 16), MainFrame.BLUE);
-    private final DefaultTableModel monthlyModel = new DefaultTableModel(new Object[] { "Month", "Total expenses" }, 0) {
+    private final MainFrame.RoundedPanel balanceCard = new MainFrame.RoundedPanel(new BorderLayout(0, 16),
+            MainFrame.BLUE);
+    private final DefaultTableModel monthlyModel = new DefaultTableModel(new Object[] { "Month", "Total expenses" },
+            0) {
         @Override
         public boolean isCellEditable(int row, int column) {
             return false;
@@ -31,7 +33,7 @@ public class DashboardPanel extends JPanel {
         this.manager = manager;
         setLayout(new BorderLayout());
         setBackground(MainFrame.BACKGROUND);
-        add(MainFrame.navigation(frame, manager), BorderLayout.NORTH);
+        add(MainFrame.navigation(frame), BorderLayout.NORTH);
 
         JPanel content = MainFrame.transparent(new BorderLayout(0, 20));
         content.setBorder(new EmptyBorder(25, 32, 20, 32));
@@ -52,9 +54,11 @@ public class DashboardPanel extends JPanel {
         JPanel body = MainFrame.transparent(new GridBagLayout());
         JPanel totals = MainFrame.transparent(new GridBagLayout());
         balanceCard.setBorder(new EmptyBorder(26, 30, 24, 30));
-        balanceCard.add(MainFrame.label("Remaining balance", 13, Font.PLAIN, new Color(230, 240, 250)), BorderLayout.NORTH);
+        balanceCard.add(MainFrame.label("Remaining balance", 13, Font.PLAIN, new Color(230, 240, 250)),
+                BorderLayout.NORTH);
         balanceCard.add(balanceValue, BorderLayout.CENTER);
-        balanceCard.add(MainFrame.label("Total income minus total expenses", 12, Font.PLAIN, new Color(230, 240, 250)), BorderLayout.SOUTH);
+        balanceCard.add(MainFrame.label("Total income minus total expenses", 12, Font.PLAIN, new Color(230, 240, 250)),
+                BorderLayout.SOUTH);
         GridBagConstraints totalsConstraints = new GridBagConstraints();
         totalsConstraints.gridy = 0;
         totalsConstraints.fill = GridBagConstraints.BOTH;

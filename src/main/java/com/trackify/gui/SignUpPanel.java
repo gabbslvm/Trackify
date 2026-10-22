@@ -1,23 +1,20 @@
 package com.trackify.gui;
 
 import com.trackify.dao.UserDAO;
-import com.trackify.manager.TransactionManager;
 import java.awt.*;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 
 public class SignUpPanel extends JPanel {
     private final MainFrame frame;
-    private final TransactionManager manager;
     private final JTextField usernameField = new JTextField();
     private final JPasswordField passwordField = new JPasswordField();
     private final JPasswordField confirmField = new JPasswordField();
     private final JLabel messageLabel = MainFrame.label(" ", 12, Font.PLAIN, MainFrame.RED);
     private final JButton signUpButton = MainFrame.button("Create Account", MainFrame.BLUE, Color.WHITE);
 
-    public SignUpPanel(MainFrame frame, TransactionManager manager) {
+    public SignUpPanel(MainFrame frame) {
         this.frame = frame;
-        this.manager = manager;
         setLayout(new BorderLayout());
         setBackground(Color.WHITE);
 
@@ -86,12 +83,6 @@ public class SignUpPanel extends JPanel {
         }
         if (!password.equals(confirm)) {
             messageLabel.setText("Passwords do not match.");
-            return;
-        }
-
-        if (manager.isDemoMode()) {
-            frame.showScreen("LOGIN");
-            frame.showLoginMessage("Preview account created. Log in with any username and password.");
             return;
         }
 

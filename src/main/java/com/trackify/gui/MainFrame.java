@@ -25,7 +25,6 @@ import javax.swing.border.MatteBorder;
 import com.trackify.manager.TransactionManager;
 
 public class MainFrame extends JFrame {
-    // ===== Colors / font (shared by all panels) =====
     static final Color BACKGROUND = TrackifyTheme.CANVAS;
     static final Color TEXT = TrackifyTheme.INK;
     static final Color MUTED = TrackifyTheme.MUTED;
@@ -34,7 +33,6 @@ public class MainFrame extends JFrame {
     static final Color RED = TrackifyTheme.RED;
     static final String UI_FONT = "SansSerif";
 
-    // ===== Screen names =====
     private static final String LOGIN = "LOGIN";
     private static final String SIGNUP = "SIGNUP";
     private static final String DASHBOARD = "DASHBOARD";
@@ -56,7 +54,7 @@ public class MainFrame extends JFrame {
         setLocationRelativeTo(null);
 
         loginPanel = new LoginPanel(this, manager);
-        signUpPanel = new SignUpPanel(this, manager);
+        signUpPanel = new SignUpPanel(this);
         dashboardPanel = new DashboardPanel(this, manager);
         transactionsPanel = new TransactionsPanel(this, manager);
 
@@ -69,7 +67,6 @@ public class MainFrame extends JFrame {
         showScreen(LOGIN);
     }
 
-    // ===== Navigation =====
     public void showScreen(String name) {
         switch (name) {
             case LOGIN -> {
@@ -92,18 +89,14 @@ public class MainFrame extends JFrame {
         cards.show(container, name);
     }
 
-    // Kept so TransactionsPanel (frame.showDashboard()) still works
-    public void showLogin() { showScreen(LOGIN); }
-    public void showSignUp() { showScreen(SIGNUP); }
-    public void showDashboard() { showScreen(DASHBOARD); }
-    public void showTransactions() { showScreen(TRANSACTIONS); }
+    public void showDashboard() {
+        showScreen(DASHBOARD);
+    }
 
-    // Shows a message on the login screen (call AFTER showScreen("LOGIN"))
     public void showLoginMessage(String message) {
         loginPanel.showMessage(message, GREEN);
     }
 
-    // ===== Shared UI helpers =====
     static JLabel label(String text, int size, int style, Color color) {
         return TrackifyTheme.label(text, size, style, color);
     }
@@ -122,7 +115,6 @@ public class MainFrame extends JFrame {
         return "PHP " + String.format("%,.2f", amount);
     }
 
-    // Label on top, input below
     static JPanel formRow(String labelText, JComponent field) {
         TrackifyTheme.styleInput(field);
         field.setPreferredSize(new Dimension(0, 38));
@@ -132,7 +124,6 @@ public class MainFrame extends JFrame {
         return row;
     }
 
-    // Colored left side of the Login / Sign Up screens
     static JPanel authBrand(String title, String subtitle) {
         JPanel side = new JPanel(new GridBagLayout());
         side.setBackground(BLUE);
@@ -159,8 +150,7 @@ public class MainFrame extends JFrame {
         return side;
     }
 
-    // Top bar of the Dashboard: brand on the left, Log Out on the right
-    static JPanel navigation(MainFrame frame, TransactionManager manager) {
+    static JPanel navigation(MainFrame frame) {
         JPanel bar = new JPanel(new BorderLayout());
         bar.setBackground(Color.WHITE);
         bar.setBorder(new javax.swing.border.CompoundBorder(
@@ -175,7 +165,6 @@ public class MainFrame extends JFrame {
         return bar;
     }
 
-    // Panel with rounded corners (used for the dashboard cards)
     static class RoundedPanel extends JPanel {
         RoundedPanel(LayoutManager layout, Color background) {
             super(layout);
