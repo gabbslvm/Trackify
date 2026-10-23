@@ -1,5 +1,6 @@
 package com.trackify.gui;
 
+import com.trackify.dao.DataAccessException;
 import com.trackify.manager.TransactionManager;
 import java.awt.*;
 import java.time.YearMonth;
@@ -19,6 +20,8 @@ public class DashboardPanel extends JPanel {
     private final JLabel balanceValue = MainFrame.label("PHP 0.00", 54, Font.BOLD, Color.WHITE);
     private final JLabel topCategory = MainFrame.label("N/A", 30, Font.BOLD, MainFrame.TEXT);
     private final JLabel topAmount = MainFrame.label("No expenses yet", 13, Font.PLAIN, MainFrame.MUTED);
+    private final JProgressBar budgetBar = new JProgressBar(0, 100);
+    private final JLabel budgetText = MainFrame.label(" ", 13, Font.PLAIN, MainFrame.MUTED);
     private final MainFrame.RoundedPanel balanceCard = new MainFrame.RoundedPanel(new BorderLayout(0, 16),
             MainFrame.BLUE);
     private final DefaultTableModel monthlyModel = new DefaultTableModel(new Object[] { "Month", "Total expenses" },
@@ -82,7 +85,7 @@ public class DashboardPanel extends JPanel {
         bodyConstraints.fill = GridBagConstraints.BOTH;
         body.add(totals, bodyConstraints);
 
-        JPanel details = MainFrame.transparent(new GridLayout(1, 2, 18, 0));
+        JPanel details = MainFrame.transparent(new GridLayout(1, 3, 18, 0));
         MainFrame.RoundedPanel top = new MainFrame.RoundedPanel(new BorderLayout(0, 12), Color.WHITE);
         top.setBorder(new EmptyBorder(18, 20, 18, 20));
         top.add(MainFrame.label("Top spending category", 14, Font.BOLD, MainFrame.TEXT), BorderLayout.NORTH);
@@ -91,6 +94,7 @@ public class DashboardPanel extends JPanel {
         topValues.add(topAmount);
         top.add(topValues, BorderLayout.CENTER);
         details.add(top);
+        details.add(budgetCard());
         details.add(monthlyCard());
         bodyConstraints.gridy = 1;
         bodyConstraints.weighty = 1;
@@ -107,6 +111,46 @@ public class DashboardPanel extends JPanel {
         value.setFont(new Font(MainFrame.UI_FONT, Font.BOLD, 28));
         card.add(value, BorderLayout.CENTER);
         return card;
+    }
+
+    private JPanel budgetCard() {
+        MainFrame.RoundedPanel card = new MainFrame.RoundedPanel(new BorderLayout(0, 12), Color.WHITE);
+        card.setBorder(new EmptyBorder(18, 20, 18, 20));
+        card.add(MainFrame.label("Monthly budget", 14, Font.BOLD, MainFrame.TEXT), BorderLayout.NORTH);
+
+        budgetBar.setStringPainted(true);
+        budgetBar.setPreferredSize(new Dimension(0, 22));
+        budgetText.setVerticalAlignment(SwingConstants.TOP);
+        JPanel middle = MainFrame.transparent(new BorderLayout(0, 10));
+        middle.add(budgetBar, BorderLayout.NORTH);
+        middle.add(budgetText, BorderLayout.CENTER);
+        card.add(middle, BorderLayout.CENTER);
+
+        JButton setButton = MainFrame.button("Set Budget", MainFrame.BLUE, Color.WHITE);
+        setButton.addActionListener(e -> setBudget());
+        card.add(setButton, BorderLayout.SOUTH);
+        return card;
+    }
+
+    private void setBudget() {
+        String input = JOptionPane.showInputDialog(this, "Enter your monthly budget (PHP):",
+                "Set Monthly Budget", JOptionPane.PLAIN_MESSAGE);
+        if (input == null)
+            return;
+        try {
+            manager.setMonthlyBudget(Double.parseDouble(input.trim().replace(",", "")));
+            refresh();
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "Budget must be a valid number.", "Invalid Input",
+                    JOptionPane.ERROR_MESSAGE);
+        } catch (IllegalArgumentException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Invalid Input", JOptionPane.ERROR_MESSAGE);
+        } catch (DataAccessException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    ex.getMessage() + "\nMake sure MySQL is running and the budgets table exists.",
+                    "Database Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private JPanel monthlyCard() {
@@ -163,6 +207,8 @@ public class DashboardPanel extends JPanel {
             topAmount.setText(MainFrame.money(top.getValue()) + " in expenses");
         }
 
+        refreshBudget();
+
         monthlyModel.setRowCount(0);
         DateTimeFormatter format = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH);
         for (Map.Entry<YearMonth, Double> month : manager.getMonthlyExpenses().entrySet()) {
@@ -171,5 +217,28 @@ public class DashboardPanel extends JPanel {
         if (monthlyModel.getRowCount() == 0) {
             monthlyModel.addRow(new Object[] { "No expenses yet", MainFrame.money(0) });
         }
+    }
+
+    private void refreshBudget() {
+        double budget = manager.getMonthlyBudget();
+        double spent = manager.getCurrentMonthExpenses();
+
+        if (budget <= 0) {
+            budgetBar.setValue(0);
+            budgetBar.setString("No budget set");
+            budgetText.setText("<html>Set a monthly limit to<br>track your spending.</html>");
+            return;
+        }
+
+        int percent = manager.getBudgetUsedPercent();
+        budgetBar.setValue(Math.min(percent, 100));
+        budgetBar.setString(percent + "%");
+        budgetBar.setForeground(percent >= 100 ? MainFrame.RED
+                : percent >= 80 ? new Color(230, 160, 0) : MainFrame.GREEN);
+
+        double left = budget - spent;
+        String leftText = left >= 0 ? MainFrame.money(left) + " left" : MainFrame.money(-left) + " over budget";
+        budgetText.setText("<html>" + MainFrame.money(spent) + " spent of " + MainFrame.money(budget)
+                + "<br>" + leftText + "</html>");
     }
 }

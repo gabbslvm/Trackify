@@ -12,8 +12,8 @@ import java.util.List;
 
 public class TransactionDAO {
     public boolean addTransaction(Transaction t) {
-        String sql = "INSERT INTO transactions (user_id, type, category, amount, transaction_date, description)"
-                + "VALUES(?, ?, ?, ?, ? , ?)";
+        String sql = "INSERT INTO transactions (user_id, type, category, amount, transaction_date, description) "
+                + "VALUES(?, ?, ?, ?, ?, ?)";
 
         try (Connection con = DBConnection.getConnection();
                 PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -35,7 +35,7 @@ public class TransactionDAO {
                 return true;
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new DataAccessException("Could not save the transaction.", e);
         }
         return false;
     }
@@ -50,6 +50,10 @@ public class TransactionDAO {
             ps.setInt(1, userId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
+                    String description = rs.getString("description");
+                    if (description == null)
+                        description = "";
+
                     list.add(new Transaction(
                             rs.getInt("id"),
                             rs.getInt("user_id"),
@@ -57,11 +61,11 @@ public class TransactionDAO {
                             rs.getString("category"),
                             rs.getDouble("amount"),
                             rs.getDate("transaction_date").toLocalDate(),
-                            rs.getString("description")));
+                            description));
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new DataAccessException("Could not load the transactions.", e);
         }
         return list;
     }
@@ -82,9 +86,8 @@ public class TransactionDAO {
 
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new DataAccessException("Could not update the transaction.", e);
         }
-        return false;
     }
 
     public boolean deleteTransaction(int id, int userId) {
@@ -97,9 +100,8 @@ public class TransactionDAO {
 
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new DataAccessException("Could not delete the transaction.", e);
         }
-        return false;
     }
 
     public boolean restoreTransaction(Transaction t) {
@@ -116,8 +118,7 @@ public class TransactionDAO {
             ps.setString(7, t.getDescription());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new DataAccessException("Could not restore the transaction.", e);
         }
-        return false;
     }
 }

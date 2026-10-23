@@ -1,5 +1,6 @@
 package com.trackify.gui;
 
+import com.trackify.dao.DataAccessException;
 import com.trackify.dao.UserDAO;
 import com.trackify.manager.TransactionManager;
 import com.trackify.model.User;
@@ -74,14 +75,21 @@ public class LoginPanel extends JPanel {
             return;
         }
 
-        User user = new UserDAO().validateLogin(username, password);
-        if (user == null) {
-            showMessage("Invalid username or password.", MainFrame.RED);
-            passwordField.setText("");
+        try {
+            User user = new UserDAO().validateLogin(username, password);
+            if (user == null) {
+                showMessage("Invalid username or password.", MainFrame.RED);
+                passwordField.setText("");
+                return;
+            }
+
+            manager.setUserId(user.getId());
+        } catch (DataAccessException ex) {
+            ex.printStackTrace();
+            showMessage("Cannot reach the database. Start MySQL in XAMPP.", MainFrame.RED);
             return;
         }
 
-        manager.setUserId(user.getId());
         frame.showScreen("DASHBOARD");
     }
 

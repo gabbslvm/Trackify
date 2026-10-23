@@ -24,7 +24,7 @@ public class UserDAO {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new DataAccessException("Could not check the login.", e);
         }
         return null;
     }
@@ -40,9 +40,8 @@ public class UserDAO {
                 return rs.next();
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new DataAccessException("Could not check the username.", e);
         }
-        return false;
     }
 
     public boolean registerUser(String username, String password) {
@@ -55,8 +54,7 @@ public class UserDAO {
             ps.setString(2, PasswordUtil.hash(password));
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new DataAccessException("Could not create the account.", e);
         }
-        return false;
     }
 }

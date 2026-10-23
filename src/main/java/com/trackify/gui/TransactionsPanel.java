@@ -7,7 +7,6 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
-import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.Window;
 import java.time.LocalDate;
@@ -32,6 +31,7 @@ import javax.swing.table.DefaultTableModel;
 
 import com.github.lgooddatepicker.components.DatePicker;
 import com.github.lgooddatepicker.components.DatePickerSettings;
+import com.trackify.dao.DataAccessException;
 import com.trackify.manager.TransactionManager;
 import com.trackify.model.Transaction;
 
@@ -47,6 +47,8 @@ public class TransactionsPanel extends JPanel {
     private final TransactionManager manager;
     private final DefaultTableModel tableModel;
     private final JTable table;
+
+    // Form fields
     private final JTextField nameField = new JTextField();
     private final JComboBox<String> typeCombo = new JComboBox<>(new String[] { "INCOME", "EXPENSE" });
     private final JTextField amountField = new JTextField();
@@ -54,11 +56,29 @@ public class TransactionsPanel extends JPanel {
     private final JComboBox<String> categoryCombo = new JComboBox<>();
     private final JTextField otherCategoryField = new JTextField();
     private final JPanel categoryPanel = new JPanel(new BorderLayout(8, 0));
+
+    // Search / filter / sort controls
     private final JTextField searchField = new JTextField();
+    private final JComboBox<String> typeFilter = new JComboBox<>(new String[] { "ALL", "INCOME", "EXPENSE" });
+    private final DatePicker fromPicker = newFilterPicker();
+    private final DatePicker toPicker = newFilterPicker();
+    private final JComboBox<String> sortField = new JComboBox<>(new String[] { "Date", "Amount" });
+    private final JComboBox<String> sortOrder = new JComboBox<>(new String[] { "Descending", "Ascending" });
+    private final JLabel resultLabel = TrackifyTheme.label(" ", 12, Font.PLAIN, TrackifyTheme.MUTED);
+
+    // The filter that is currently applied to the table (sorting works on these results)
+    private String activeKeyword = "";
+    private String activeType = "ALL";
+    private LocalDate activeFrom = null;
+    private LocalDate activeTo = null;
+    private boolean updatingControls = false;
+
+    // Summary labels
     private final JLabel incomeValue = new JLabel("PHP 0.00");
     private final JLabel expenseValue = new JLabel("PHP 0.00");
     private final JLabel balanceValue = new JLabel("PHP 0.00");
     private final JLabel topValue = new JLabel("N/A");
+
     private int selectedId = -1;
     private boolean ignoreSelection = false;
 
@@ -165,48 +185,95 @@ public class TransactionsPanel extends JPanel {
         filler.weighty = 1.0;
         summaryPanel.add(new JPanel(), filler);
 
-        // ===== Search =====
-        JPanel searchPanel = TrackifyTheme.sectionPanel("Search", new BorderLayout(8, 8));
-        searchPanel.add(new JLabel("Keyword: "), BorderLayout.WEST);
+        // ===== Search, Filter & Sort =====
+        JPanel searchPanel = TrackifyTheme.sectionPanel("Search, Filter & Sort", new GridBagLayout());
         TrackifyTheme.styleInput(searchField);
-        searchPanel.add(searchField, BorderLayout.CENTER);
-        JButton searchButton = makeButton("Search", TrackifyTheme.PRIMARY);
-        searchButton.addActionListener(e -> searchTransactions());
-        searchPanel.add(searchButton, BorderLayout.EAST);
+        TrackifyTheme.styleInput(typeFilter);
+        TrackifyTheme.styleInput(sortField);
+        TrackifyTheme.styleInput(sortOrder);
+        searchField.setToolTipText("Matches the name, category or type (income / expense)");
+        fromPicker.setToolTipText("From date (mm/dd/yyyy). Leave empty for no limit.");
+        toPicker.setToolTipText("To date (mm/dd/yyyy). Leave empty for no limit.");
 
+        GridBagConstraints s = new GridBagConstraints();
+        s.insets = new Insets(3, 4, 3, 4);
+        s.fill = GridBagConstraints.HORIZONTAL;
+        s.anchor = GridBagConstraints.WEST;
+
+        // Row 0: keyword
+        s.gridx = 0;
+        s.gridy = 0;
+        s.weightx = 0;
+        searchPanel.add(new JLabel("Keyword:"), s);
+        s.gridx = 1;
+        s.gridwidth = 3;
+        s.weightx = 1.0;
+        searchPanel.add(searchField, s);
+        s.gridwidth = 1;
+
+        // Row 1: type + from date
+        s.gridy = 1;
+        s.gridx = 0;
+        s.weightx = 0;
+        searchPanel.add(new JLabel("Type:"), s);
+        s.gridx = 1;
+        s.weightx = 1.0;
+        searchPanel.add(typeFilter, s);
+        s.gridx = 2;
+        s.weightx = 0;
+        searchPanel.add(new JLabel("From:"), s);
+        s.gridx = 3;
+        s.weightx = 1.0;
+        searchPanel.add(fromPicker, s);
+
+        // Row 2: sort + to date
+        JPanel sortBox = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        sortBox.setOpaque(false);
+        sortBox.add(sortField);
+        sortBox.add(sortOrder);
+        s.gridy = 2;
+        s.gridx = 0;
+        s.weightx = 0;
+        searchPanel.add(new JLabel("Sort by:"), s);
+        s.gridx = 1;
+        s.weightx = 1.0;
+        searchPanel.add(sortBox, s);
+        s.gridx = 2;
+        s.weightx = 0;
+        searchPanel.add(new JLabel("To:"), s);
+        s.gridx = 3;
+        s.weightx = 1.0;
+        searchPanel.add(toPicker, s);
+
+        // Row 3: result count + buttons
+        JButton searchButton = makeButton("Search", TrackifyTheme.PRIMARY);
         JButton resetButton = makeButton("Show All", TrackifyTheme.MUTED);
-        resetButton.setPreferredSize(new Dimension(106, 36));
+        resetButton.setPreferredSize(new Dimension(100, 34));
+        searchButton.addActionListener(e -> searchTransactions());
         resetButton.addActionListener(e -> {
-            searchField.setText("");
-            refreshTable();
+            resetFilters();
+            showResults();
         });
         JPanel searchActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
         searchActions.setOpaque(false);
+        searchActions.add(searchButton);
         searchActions.add(resetButton);
-        searchPanel.add(searchActions, BorderLayout.SOUTH);
 
-        // ===== Sort =====
-        JPanel sortPanel = TrackifyTheme.sectionPanel("Sort", new FlowLayout(FlowLayout.LEFT, 8, 0));
-        JComboBox<String> sortField = new JComboBox<>(new String[] { "Date", "Amount" });
-        JComboBox<String> sortOrder = new JComboBox<>(new String[] { "Ascending", "Descending" });
-        TrackifyTheme.styleInput(sortField);
-        TrackifyTheme.styleInput(sortOrder);
-        JButton sortButton = makeButton("Apply", TrackifyTheme.PRIMARY);
-        sortButton.addActionListener(e -> {
-            String field = (String) sortField.getSelectedItem();
-            boolean ascending = "Ascending".equals(sortOrder.getSelectedItem());
-            fillTable(manager.getSortedTransactions(field, ascending));
-        });
-        sortPanel.add(sortField);
-        sortPanel.add(sortOrder);
-        sortPanel.add(sortButton);
+        s.gridy = 3;
+        s.gridx = 0;
+        s.gridwidth = 2;
+        s.weightx = 1.0;
+        searchPanel.add(resultLabel, s);
+        s.gridx = 2;
+        searchPanel.add(searchActions, s);
+        s.gridwidth = 1;
 
-        JPanel filters = new JPanel(new GridLayout(2, 1, 0, 8));
-        filters.setOpaque(false);
-        filters.add(searchPanel);
-        filters.add(sortPanel);
+        // Enter in the keyword box searches; changing the sort re-sorts the shown results
+        searchField.addActionListener(e -> searchTransactions());
+        sortField.addActionListener(e -> sortChanged());
+        sortOrder.addActionListener(e -> sortChanged());
 
-        rightPanel.add(filters, BorderLayout.NORTH);
+        rightPanel.add(searchPanel, BorderLayout.NORTH);
         rightPanel.add(summaryPanel, BorderLayout.CENTER);
 
         content.add(formPanel, BorderLayout.WEST);
@@ -260,6 +327,12 @@ public class TransactionsPanel extends JPanel {
 
     // ===== Form helpers =====
 
+    private static DatePicker newFilterPicker() {
+        DatePickerSettings settings = new DatePickerSettings();
+        settings.setFormatForDatesCommonEra("MM/dd/yyyy");
+        return new DatePicker(settings);
+    }
+
     // Adds a label + component and styles the component like a text field
     private void addFormField(JPanel panel, GridBagConstraints gbc, int x, int y, String labelText,
             JComponent component) {
@@ -283,7 +356,7 @@ public class TransactionsPanel extends JPanel {
 
     private void addSummaryRow(JPanel panel, int row, String labelText, JLabel valueLabel) {
         GridBagConstraints c = new GridBagConstraints();
-        c.insets = new Insets(8, 12, 8, 12);
+        c.insets = new Insets(4, 12, 4, 12);
         c.gridy = row;
         c.anchor = GridBagConstraints.WEST;
 
@@ -362,23 +435,45 @@ public class TransactionsPanel extends JPanel {
         return date.toString();
     }
 
+    // Reads the amount box: accepts "1,500" and gives clear messages for empty / invalid input
+    private double parseAmount() {
+        String text = amountField.getText().trim().replace(",", "");
+        if (text.isEmpty())
+            throw new IllegalArgumentException("Please enter an amount.");
+        try {
+            return Double.parseDouble(text);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Amount must be a valid number.");
+        }
+    }
+
+    // ===== Error helpers =====
+
+    private void showError(String message, String title) {
+        JOptionPane.showMessageDialog(this, message, title, JOptionPane.ERROR_MESSAGE);
+    }
+
+    private void showDbError(DataAccessException ex) {
+        ex.printStackTrace();
+        showError(ex.getMessage() + "\nMake sure MySQL is running in XAMPP.", "Database Error");
+    }
+
     // ===== Actions =====
 
     private void addTransaction() {
         try {
             String name = nameField.getText().trim();
             String type = (String) typeCombo.getSelectedItem();
-            double amount = Double.parseDouble(amountField.getText().trim());
+            double amount = parseAmount();
             String date = getDateText();
             String category = getCategory();
 
             manager.addTransaction(name, type, amount, date, category);
             clearForm();
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "Amount must be a valid number.", "Invalid Input",
-                    JOptionPane.ERROR_MESSAGE);
         } catch (IllegalArgumentException ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Invalid Input", JOptionPane.ERROR_MESSAGE);
+            showError(ex.getMessage(), "Invalid Input");
+        } catch (DataAccessException ex) {
+            showDbError(ex);
         }
     }
 
@@ -392,17 +487,16 @@ public class TransactionsPanel extends JPanel {
         try {
             String name = nameField.getText().trim();
             String type = (String) typeCombo.getSelectedItem();
-            double amount = Double.parseDouble(amountField.getText().trim());
+            double amount = parseAmount();
             String date = getDateText();
             String category = getCategory();
 
             manager.editTransaction(selectedId, name, type, amount, date, category);
             clearForm();
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "Amount must be a valid number.", "Update Error",
-                    JOptionPane.ERROR_MESSAGE);
         } catch (IllegalArgumentException ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Update Error", JOptionPane.ERROR_MESSAGE);
+            showError(ex.getMessage(), "Update Error");
+        } catch (DataAccessException ex) {
+            showDbError(ex);
         }
     }
 
@@ -416,8 +510,14 @@ public class TransactionsPanel extends JPanel {
         int confirm = JOptionPane.showConfirmDialog(this, "Delete the selected transaction?", "Confirm Delete",
                 JOptionPane.YES_NO_OPTION);
         if (confirm == JOptionPane.YES_OPTION) {
-            manager.deleteTransaction(selectedId);
-            clearForm();
+            try {
+                manager.deleteTransaction(selectedId);
+                clearForm();
+            } catch (IllegalArgumentException ex) {
+                showError(ex.getMessage(), "Delete Error");
+            } catch (DataAccessException ex) {
+                showDbError(ex);
+            }
         }
     }
 
@@ -428,7 +528,8 @@ public class TransactionsPanel extends JPanel {
             return;
         }
 
-        // show all rows, then highlight the row that will be affected
+        // show all rows (no filter), then highlight the row that will be affected
+        resetFilters();
         refreshTable();
         table.setSelectionBackground(UNDO_HIGHLIGHT);
         highlightRow(manager.getLastActionTransactionId());
@@ -437,8 +538,12 @@ public class TransactionsPanel extends JPanel {
 
         table.setSelectionBackground(TrackifyTheme.SELECTION);
         if (confirmed) {
-            manager.undoLastAction();
-            clearForm();
+            try {
+                manager.undoLastAction();
+                clearForm();
+            } catch (DataAccessException ex) {
+                showDbError(ex);
+            }
         } else {
             ignoreSelection = true;
             table.clearSelection();
@@ -480,13 +585,76 @@ public class TransactionsPanel extends JPanel {
         return Integer.valueOf(JOptionPane.YES_OPTION).equals(pane.getValue());
     }
 
+    // ===== Search / Filter / Sort =====
+
+    // Reads a filter date picker. Empty = no limit; typed text that is not a date = error
+    private LocalDate readFilterDate(DatePicker picker, String label) {
+        LocalDate date = picker.getDate();
+        boolean hasText = !picker.getComponentDateTextField().getText().trim().isEmpty();
+        if (date == null && hasText)
+            throw new IllegalArgumentException("Please enter a valid " + label + " date (mm/dd/yyyy).");
+        return date;
+    }
+
+    // Search button / Enter key: applies keyword + type + date range, then the chosen sort
     private void searchTransactions() {
-        List<Transaction> matches = manager.searchTransactions(searchField.getText());
-        fillTable(matches);
-        if (matches.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No matching transactions.", "Search",
-                    JOptionPane.INFORMATION_MESSAGE);
+        try {
+            LocalDate from = readFilterDate(fromPicker, "From");
+            LocalDate to = readFilterDate(toPicker, "To");
+            String keyword = searchField.getText().trim();
+            String type = (String) typeFilter.getSelectedItem();
+
+            List<Transaction> matches = manager.filterTransactions(keyword, type, from, to);
+
+            // Remember the filter so that changing the sort re-sorts these same results
+            activeKeyword = keyword;
+            activeType = type;
+            activeFrom = from;
+            activeTo = to;
+            fillTable(sortedCopy(matches));
+
+            if (matches.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "No matching transactions.", "Search",
+                        JOptionPane.INFORMATION_MESSAGE);
+            }
+        } catch (IllegalArgumentException ex) {
+            showError(ex.getMessage(), "Invalid Search");
         }
+    }
+
+    // Sort dropdown changed: re-sort what is currently shown
+    private void sortChanged() {
+        if (!updatingControls)
+            showResults();
+    }
+
+    private List<Transaction> sortedCopy(List<Transaction> list) {
+        String field = (String) sortField.getSelectedItem();
+        boolean ascending = "Ascending".equals(sortOrder.getSelectedItem());
+        return manager.sortTransactions(list, field, ascending);
+    }
+
+    // Shows the currently applied filter, sorted by the sort dropdowns
+    private void showResults() {
+        List<Transaction> matches = manager.filterTransactions(activeKeyword, activeType, activeFrom, activeTo);
+        fillTable(sortedCopy(matches));
+    }
+
+    // Back to "no filter, newest first"
+    private void resetFilters() {
+        updatingControls = true;
+        searchField.setText("");
+        typeFilter.setSelectedIndex(0);
+        fromPicker.setDate(null);
+        toPicker.setDate(null);
+        sortField.setSelectedIndex(0);
+        sortOrder.setSelectedIndex(0);
+        updatingControls = false;
+
+        activeKeyword = "";
+        activeType = "ALL";
+        activeFrom = null;
+        activeTo = null;
     }
 
     private void fillTable(List<Transaction> transactions) {
@@ -495,10 +663,29 @@ public class TransactionsPanel extends JPanel {
             tableModel.addRow(new Object[] { t.getId(), t.getDescription(), t.getType(), t.getAmount(),
                     t.getCategory(), t.getDate().format(TransactionManager.DATE_FORMAT) });
         }
+        resultLabel.setText("Showing " + transactions.size() + " of " + manager.getTransactions().size()
+                + " records");
+        restoreSelection();
+    }
+
+    // Keeps the selected row selected after the table is rebuilt (for example after sorting)
+    private void restoreSelection() {
+        if (selectedId <= 0)
+            return;
+        for (int row = 0; row < tableModel.getRowCount(); row++) {
+            if ((int) tableModel.getValueAt(row, 0) == selectedId) {
+                ignoreSelection = true;
+                table.setRowSelectionInterval(row, row);
+                ignoreSelection = false;
+                return;
+            }
+        }
+        // The selected record is hidden by the filter, so it can no longer be edited/deleted
+        selectedId = -1;
     }
 
     private void refreshTable() {
-        fillTable(manager.getTransactions());
+        showResults();
         refreshSummary();
     }
 
@@ -539,7 +726,7 @@ public class TransactionsPanel extends JPanel {
         loadCategories();
         amountField.setText("");
         datePicker.setDate(LocalDate.now());
-        searchField.setText("");
+        resetFilters();
         table.clearSelection();
         refreshTable();
     }

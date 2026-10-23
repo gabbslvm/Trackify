@@ -1,5 +1,6 @@
 package com.trackify.gui;
 
+import com.trackify.dao.DataAccessException;
 import com.trackify.dao.UserDAO;
 import java.awt.*;
 import javax.swing.*;
@@ -77,6 +78,10 @@ public class SignUpPanel extends JPanel {
             messageLabel.setText("Username must be at least 3 characters.");
             return;
         }
+        if (username.length() > 50) {
+            messageLabel.setText("Username must be 50 characters or less.");
+            return;
+        }
         if (password.length() < 6) {
             messageLabel.setText("Password must be at least 6 characters.");
             return;
@@ -86,13 +91,19 @@ public class SignUpPanel extends JPanel {
             return;
         }
 
-        UserDAO dao = new UserDAO();
-        if (dao.usernameExists(username)) {
-            messageLabel.setText("Username is already taken.");
-            return;
-        }
-        if (!dao.registerUser(username, password)) {
-            messageLabel.setText("Could not create the account. Please try again.");
+        try {
+            UserDAO dao = new UserDAO();
+            if (dao.usernameExists(username)) {
+                messageLabel.setText("Username is already taken.");
+                return;
+            }
+            if (!dao.registerUser(username, password)) {
+                messageLabel.setText("Could not create the account. Please try again.");
+                return;
+            }
+        } catch (DataAccessException ex) {
+            ex.printStackTrace();
+            messageLabel.setText("Cannot reach the database. Start MySQL in XAMPP.");
             return;
         }
 
