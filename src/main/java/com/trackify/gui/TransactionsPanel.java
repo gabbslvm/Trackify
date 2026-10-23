@@ -280,7 +280,7 @@ public class TransactionsPanel extends JPanel {
         content.add(rightPanel, BorderLayout.CENTER);
 
         // ===== Table =====
-        tableModel = new DefaultTableModel(new Object[] { "ID", "Name", "Type", "Amount", "Category", "Date" }, 0) {
+        tableModel = new DefaultTableModel(new Object[] { "ID", "Name", "Type", "Amount", "Category", "Date", "Status" }, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
                 return false;
@@ -460,6 +460,15 @@ public class TransactionsPanel extends JPanel {
 
     // ===== Actions =====
 
+    // Tells the user when a future-dated transaction was saved as pending
+    private void notifyIfPending(String date) {
+        LocalDate d = LocalDate.parse(date);
+        if (d.isAfter(LocalDate.now()))
+            JOptionPane.showMessageDialog(this,
+                    "Saved as PENDING. It will be counted on " + d.format(TransactionManager.DATE_FORMAT) + ".",
+                    "Pending Transaction", JOptionPane.INFORMATION_MESSAGE);
+    }
+
     private void addTransaction() {
         try {
             String name = nameField.getText().trim();
@@ -469,6 +478,7 @@ public class TransactionsPanel extends JPanel {
             String category = getCategory();
 
             manager.addTransaction(name, type, amount, date, category);
+            notifyIfPending(date);
             clearForm();
         } catch (IllegalArgumentException ex) {
             showError(ex.getMessage(), "Invalid Input");
@@ -492,6 +502,7 @@ public class TransactionsPanel extends JPanel {
             String category = getCategory();
 
             manager.editTransaction(selectedId, name, type, amount, date, category);
+            notifyIfPending(date);
             clearForm();
         } catch (IllegalArgumentException ex) {
             showError(ex.getMessage(), "Update Error");
@@ -661,7 +672,8 @@ public class TransactionsPanel extends JPanel {
         tableModel.setRowCount(0);
         for (Transaction t : transactions) {
             tableModel.addRow(new Object[] { t.getId(), t.getDescription(), t.getType(), t.getAmount(),
-                    t.getCategory(), t.getDate().format(TransactionManager.DATE_FORMAT) });
+                    t.getCategory(), t.getDate().format(TransactionManager.DATE_FORMAT),
+                    t.isPending() ? "Pending" : "Recorded" });
         }
         resultLabel.setText("Showing " + transactions.size() + " of " + manager.getTransactions().size()
                 + " records");

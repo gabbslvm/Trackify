@@ -199,9 +199,19 @@ public class TransactionManager {
         return sortTransactions(transactions, field, ascending);
     }
 
+    // Only transactions whose date has arrived (pending ones are left out of all totals)
+    private List<Transaction> recorded() {
+        List<Transaction> list = new ArrayList<>();
+        for (Transaction t : transactions) {
+            if (!t.isPending())
+                list.add(t);
+        }
+        return list;
+    }
+
     private double total(String type) {
         double sum = 0;
-        for (Transaction t : transactions) {
+        for (Transaction t : recorded()) {
             if (t.getType().equals(type))
                 sum += t.getAmount();
         }
@@ -228,7 +238,7 @@ public class TransactionManager {
 
     public HashMap<String, Double> getCategoryTotals() {
         HashMap<String, Double> totals = new HashMap<>();
-        for (Transaction t : transactions) {
+        for (Transaction t : recorded()) {
             if (t.getType().equals("EXPENSE"))
                 totals.merge(displayCategory(t.getCategory()), t.getAmount(), Double::sum);
         }
@@ -237,7 +247,7 @@ public class TransactionManager {
 
     public TreeMap<YearMonth, Double> getMonthlyExpenses() {
         TreeMap<YearMonth, Double> monthly = new TreeMap<>();
-        for (Transaction t : transactions) {
+        for (Transaction t : recorded()) {
             if (t.getType().equals("EXPENSE"))
                 monthly.merge(YearMonth.from(t.getDate()), t.getAmount(), Double::sum);
         }

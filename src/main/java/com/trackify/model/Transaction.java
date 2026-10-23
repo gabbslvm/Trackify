@@ -78,6 +78,10 @@ public class Transaction {
         this.description = description;
     }
 
+    public boolean isPending() {
+        return date.isAfter(LocalDate.now());
+    }
+
     @Override
     public String toString() {
         return "Transaction{id=" + id + ", type=" + type + ", category=" + category

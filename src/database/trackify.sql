@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 19, 2026 at 12:08 PM
+-- Generation Time: Oct 23, 2026 at 05:05 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -20,6 +20,24 @@ SET time_zone = "+00:00";
 --
 -- Database: `trackify`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `budgets`
+--
+
+CREATE TABLE `budgets` (
+  `user_id` int(11) NOT NULL,
+  `monthly_limit` decimal(12,2) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `budgets`
+--
+
+INSERT INTO `budgets` (`user_id`, `monthly_limit`) VALUES
+(1, 20000.00);
 
 -- --------------------------------------------------------
 
@@ -42,13 +60,13 @@ CREATE TABLE `transactions` (
 --
 
 INSERT INTO `transactions` (`id`, `user_id`, `type`, `category`, `amount`, `transaction_date`, `description`) VALUES
-(4, 1, 'INCOME', 'bills', 500.00, '2026-10-02', 'asddsadsad'),
-(5, 1, 'INCOME', 'transportation', 100.00, '2026-09-18', 'gdnhdvsdvdsv'),
 (7, 1, 'INCOME', 'Salary', 20000.00, '2026-10-01', 'salary'),
 (8, 1, 'EXPENSE', 'food', 500.00, '2026-10-02', 'lunch'),
 (9, 1, 'EXPENSE', 'transportation', 300.00, '2026-10-03', 'bus'),
 (10, 1, 'EXPENSE', 'bills', 300.00, '2026-10-04', 'load'),
-(11, 1, 'EXPENSE', 'food', 1500.00, '2026-10-05', 'groceries');
+(11, 1, 'EXPENSE', 'food', 1500.00, '2026-10-05', 'groceries'),
+(16, 1, 'EXPENSE', 'Gala', 1700.00, '2026-10-23', 'Gastos'),
+(18, 1, 'INCOME', 'Salary', 30000.00, '2026-10-30', '13th month');
 
 -- --------------------------------------------------------
 
@@ -75,6 +93,12 @@ INSERT INTO `users` (`id`, `username`, `password`) VALUES
 --
 
 --
+-- Indexes for table `budgets`
+--
+ALTER TABLE `budgets`
+  ADD PRIMARY KEY (`user_id`);
+
+--
 -- Indexes for table `transactions`
 --
 ALTER TABLE `transactions`
@@ -96,7 +120,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `transactions`
 --
 ALTER TABLE `transactions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `users`
@@ -107,6 +131,12 @@ ALTER TABLE `users`
 --
 -- Constraints for dumped tables
 --
+
+--
+-- Constraints for table `budgets`
+--
+ALTER TABLE `budgets`
+  ADD CONSTRAINT `budgets_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `transactions`
