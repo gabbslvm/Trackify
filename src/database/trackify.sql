@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 23, 2026 at 05:05 PM
+-- Generation Time: Oct 30, 2026 at 12:45 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -37,7 +37,7 @@ CREATE TABLE `budgets` (
 --
 
 INSERT INTO `budgets` (`user_id`, `monthly_limit`) VALUES
-(1, 20000.00);
+(1, 100000.00);
 
 -- --------------------------------------------------------
 
@@ -63,10 +63,11 @@ INSERT INTO `transactions` (`id`, `user_id`, `type`, `category`, `amount`, `tran
 (7, 1, 'INCOME', 'Salary', 20000.00, '2026-10-01', 'salary'),
 (8, 1, 'EXPENSE', 'food', 500.00, '2026-10-02', 'lunch'),
 (9, 1, 'EXPENSE', 'transportation', 300.00, '2026-10-03', 'bus'),
-(10, 1, 'EXPENSE', 'bills', 300.00, '2026-10-04', 'load'),
-(11, 1, 'EXPENSE', 'food', 1500.00, '2026-10-05', 'groceries'),
+(11, 1, 'EXPENSE', 'Food', 2000.00, '2026-10-05', 'groceries'),
 (16, 1, 'EXPENSE', 'Gala', 1700.00, '2026-10-23', 'Gastos'),
-(18, 1, 'INCOME', 'Salary', 30000.00, '2026-10-30', '13th month');
+(18, 1, 'INCOME', 'Salary', 30000.00, '2026-10-30', '13th month'),
+(19, 1, 'EXPENSE', 'Food', 1500.00, '2026-10-26', 'food'),
+(20, 1, 'EXPENSE', 'load', 300.00, '2026-10-26', 'load');
 
 -- --------------------------------------------------------
 
@@ -120,13 +121,13 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `transactions`
 --
 ALTER TABLE `transactions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- Constraints for dumped tables
